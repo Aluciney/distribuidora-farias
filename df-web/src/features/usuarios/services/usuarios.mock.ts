@@ -1,51 +1,9 @@
-import { PerfilUsuario, type Usuario, type UUID } from '@/types';
-
-const NOW = '2026-05-05T12:00:00Z';
-
-const SEED: Usuario[] = [
-  {
-    id: 'usr-001',
-    nome: 'Aluciney Wanderley',
-    email: 'aluciney.wanderley@distribuidorafarias.com.br',
-    perfil: PerfilUsuario.ADMIN,
-    ativo: true,
-    ultimoAcesso: '2026-05-05T11:42:00Z',
-    criadoEm: '2024-08-01T09:00:00Z',
-  },
-  {
-    id: 'usr-002',
-    nome: 'Marina Costa',
-    email: 'marina.costa@distribuidorafarias.com.br',
-    perfil: PerfilUsuario.FINANCEIRO,
-    ativo: true,
-    ultimoAcesso: '2026-05-05T08:30:00Z',
-    criadoEm: '2024-09-15T10:00:00Z',
-  },
-  {
-    id: 'usr-003',
-    nome: 'Rafael Almeida',
-    email: 'rafael.almeida@distribuidorafarias.com.br',
-    perfil: PerfilUsuario.FINANCEIRO,
-    ativo: true,
-    ultimoAcesso: '2026-05-04T17:55:00Z',
-    criadoEm: '2025-01-22T14:00:00Z',
-  },
-  {
-    id: 'usr-004',
-    nome: 'Patrícia Lima',
-    email: 'patricia.lima@distribuidorafarias.com.br',
-    perfil: PerfilUsuario.FINANCEIRO,
-    ativo: false,
-    ultimoAcesso: '2025-12-12T09:20:00Z',
-    criadoEm: '2025-03-10T08:30:00Z',
-  },
-];
-
-let banco: Usuario[] = [...SEED];
-
-const SIMULATED_LATENCY_MS = 300;
-const delay = () =>
-  new Promise<void>((resolve) => setTimeout(resolve, SIMULATED_LATENCY_MS));
+/**
+ * @deprecated Mantém o nome original; agora chama df-api via axios.
+ */
+import { api } from '@/services/api/http';
+import { fromUsuarioDTO, type UsuarioDTO } from '@/services/api/transformers';
+import { type PerfilUsuario, type Usuario, type UUID } from '@/types';
 
 export interface FiltrosUsuarios {
   busca?: string;
@@ -53,85 +11,68 @@ export interface FiltrosUsuarios {
   ativo?: boolean | 'TODOS';
 }
 
-export type DadosUsuario = Omit<
-  Usuario,
-  'id' | 'criadoEm' | 'ultimoAcesso'
->;
+export type DadosUsuario = Omit<Usuario, 'id' | 'criadoEm' | 'ultimoAcesso'>;
+
+interface ListagemDTO {
+  itens: UsuarioDTO[];
+}
 
 export const usuariosService = {
   async listar(filtros: FiltrosUsuarios = {}): Promise<Usuario[]> {
-    await delay();
-    const buscaNorm = (filtros.busca ?? '').trim().toLowerCase();
-    return banco
-      .filter((u) => {
-        if (
-          filtros.perfil &&
-          filtros.perfil !== 'TODOS' &&
-          u.perfil !== filtros.perfil
-        ) {
-          return false;
-        }
-        if (
-          filtros.ativo !== undefined &&
-          filtros.ativo !== 'TODOS' &&
-          u.ativo !== filtros.ativo
-        ) {
-          return false;
-        }
-        if (!buscaNorm) return true;
-        return (
-          u.nome.toLowerCase().includes(buscaNorm) ||
-          u.email.toLowerCase().includes(buscaNorm)
-        );
-      })
-      .sort((a, b) => a.nome.localeCompare(b.nome));
+    const perfil =
+      filtros.perfil && filtros.perfil !== 'TODOS' && filtros.perfil !== 'CLIENTE'
+        ? filtros.perfil
+        : undefined;
+    const ativo =
+      filtros.ativo === undefined || filtros.ativo === 'TODOS'
+        ? undefined
+        : String(filtros.ativo);
+    const { itens } = await api.get<ListagemDTO>('/admin/usuarios', {
+      busca: filtros.busca,
+      perfil,
+      ativo,
+    });
+    return itens.map(fromUsuarioDTO);
   },
 
   async obter(id: UUID): Promise<Usuario | undefined> {
-    await delay();
-    return banco.find((u) => u.id === id);
+    try {
+      return fromUsuarioDTO(await api.get<UsuarioDTO>(`/admin/usuarios/${id}`));
+    } catch {
+      return undefined;
+    }
   },
 
   async criar(dados: DadosUsuario): Promise<Usuario> {
-    await delay();
-    const emailNorm = dados.email.trim().toLowerCase();
-    if (banco.some((u) => u.email.toLowerCase() === emailNorm)) {
-      throw new Error('Já existe um usuário com este email.');
+    if (dados.perfil === 'CLIENTE') {
+      throw new Error('Perfil CLIENTE não pode ser criado pela tela de usuários internos.');
     }
-    const novo: Usuario = {
-      ...dados,
-      email: emailNorm,
-      id: `usr-${crypto.randomUUID().slice(0, 8)}`,
-      criadoEm: NOW,
-    };
-    banco = [...banco, novo];
-    return novo;
+    const dto = await api.post<UsuarioDTO>('/admin/usuarios', {
+      nome: dados.nome,
+      email: dados.email.trim().toLowerCase(),
+      perfil: dados.perfil,
+      ativo: dados.ativo,
+    });
+    return fromUsuarioDTO(dto);
   },
 
   async atualizar(id: UUID, dados: DadosUsuario): Promise<Usuario> {
-    await delay();
-    const idx = banco.findIndex((u) => u.id === id);
-    if (idx === -1) throw new Error('Usuário não encontrado.');
-    const emailNorm = dados.email.trim().toLowerCase();
-    if (banco.some((u) => u.email.toLowerCase() === emailNorm && u.id !== id)) {
-      throw new Error('Já existe outro usuário com este email.');
+    if (dados.perfil === 'CLIENTE') {
+      throw new Error('Perfil CLIENTE não é válido para usuários internos.');
     }
-    const atualizado: Usuario = {
-      ...banco[idx],
-      ...dados,
-      email: emailNorm,
-      id,
-    };
-    banco = banco.map((u) => (u.id === id ? atualizado : u));
-    return atualizado;
+    const dto = await api.put<UsuarioDTO>(`/admin/usuarios/${id}`, {
+      nome: dados.nome,
+      email: dados.email.trim().toLowerCase(),
+      perfil: dados.perfil,
+      ativo: dados.ativo,
+    });
+    return fromUsuarioDTO(dto);
   },
 
   async alternarAtivo(id: UUID): Promise<Usuario> {
-    await delay();
-    const atual = banco.find((u) => u.id === id);
+    const atual = await this.obter(id);
     if (!atual) throw new Error('Usuário não encontrado.');
-    const atualizado: Usuario = { ...atual, ativo: !atual.ativo };
-    banco = banco.map((u) => (u.id === id ? atualizado : u));
-    return atualizado;
+    const dto = await api.patch<UsuarioDTO>(`/admin/usuarios/${id}/ativo`, { ativo: !atual.ativo });
+    return fromUsuarioDTO(dto);
   },
 };

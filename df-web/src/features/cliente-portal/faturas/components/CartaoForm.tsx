@@ -57,6 +57,9 @@ export function CartaoForm({ fatura, onPagamentoConfirmado }: CartaoFormProps) {
         numero: valores.numero,
         bandeira,
         parcelas: valores.parcelas,
+        nomeImpresso: valores.nomeImpresso,
+        validade: valores.validade,
+        cvv: valores.cvv,
       },
     });
     onPagamentoConfirmado();

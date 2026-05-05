@@ -6,7 +6,11 @@
       "Bash(npx prisma *)",
       "Bash(npx tsc *)",
       "Bash(echo \"exit=$?\")",
-      "Bash(npx tsup *)"
+      "Bash(npx tsup *)",
+      "Bash(Get-ChildItem -Path \"D:\\\\df-distribuidora\\\\claude\\\\df-web\\\\src\" -Directory)",
+      "Bash(Select-Object Name)",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\df-distribuidora\\\\claude\\\\df-web\\\\src\\\\app\" -Recurse | Where-Object { $_.Name -match \"router|route\" } | Select-Object -ExpandProperty FullName)",
+      "PowerShell(head -10)"
     ]
   }
 }

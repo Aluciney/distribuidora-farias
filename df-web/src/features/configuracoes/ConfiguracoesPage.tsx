@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Building2, Landmark, QrCode, Save, Settings2, ShieldCheck } from 'lucide-react';
@@ -9,20 +10,24 @@ import { Textarea } from '@/components/ui/Textarea';
 import { FormField } from '@/components/ui/FormField';
 import {
   BANCOS_SUPORTADOS,
+  CONFIG_PADRAO,
   configuracoesProntas,
-  useConfiguracoesStore,
   type ConfiguracoesCobranca,
 } from '@/features/configuracoes/store/configuracoes.store';
+import {
+  useAtualizarConfiguracoes,
+  useConfiguracoes,
+} from '@/features/configuracoes/services/configuracoes.service';
 import {
   configuracoesSchema,
   type ConfiguracoesFormValues,
 } from '@/features/configuracoes/schemas/configuracoes.schema';
 import { maskCEP, maskCNPJ } from '@/utils/cnpj';
-import { toast } from '@/store/toast.store';
 
 export function ConfiguracoesPage() {
-  const config = useConfiguracoesStore((s) => s.config);
-  const atualizar = useConfiguracoesStore((s) => s.atualizar);
+  const { data: config, isLoading } = useConfiguracoes();
+  const atualizar = useAtualizarConfiguracoes();
+  const valoresIniciais: ConfiguracoesCobranca = config ?? CONFIG_PADRAO;
 
   const {
     register,
@@ -34,25 +39,25 @@ export function ConfiguracoesPage() {
     formState: { errors, isSubmitting, isDirty },
   } = useForm<ConfiguracoesFormValues>({
     resolver: zodResolver(configuracoesSchema),
-    defaultValues: config,
+    defaultValues: valoresIniciais,
   });
+
+  useEffect(() => {
+    if (config) reset(config);
+  }, [config, reset]);
 
   const tipoChavePix = watch('pix.tipoChave');
   const codigoBancoSelecionado = watch('banco.codigoBanco');
+  const configAtual = config ?? CONFIG_PADRAO;
 
-  const onSubmit = handleSubmit((valores) => {
+  const onSubmit = handleSubmit(async (valores) => {
     const proximo: ConfiguracoesCobranca = {
-      ...config,
+      ...configAtual,
       ...valores,
-      // Preserva o sequencial atual caso o input tenha sido limpo durante edição.
-      banco: { ...config.banco, ...valores.banco },
+      banco: { ...configAtual.banco, ...valores.banco },
     };
-    atualizar(proximo);
-    reset(proximo);
-    toast.sucesso(
-      'Configurações salvas',
-      'Os próximos boletos e PIX usarão estes dados.',
-    );
+    const salvo = await atualizar.mutateAsync(proximo);
+    reset(salvo);
   });
 
   return (
@@ -70,19 +75,23 @@ export function ConfiguracoesPage() {
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            onClick={() => reset(config)}
-            disabled={!isDirty || isSubmitting}
+            onClick={() => reset(configAtual)}
+            disabled={!isDirty || isSubmitting || isLoading}
           >
             Descartar
           </Button>
-          <Button onClick={onSubmit} loading={isSubmitting} disabled={!isDirty}>
+          <Button
+            onClick={onSubmit}
+            loading={isSubmitting || atualizar.isPending}
+            disabled={!isDirty || isLoading}
+          >
             <Save className="h-4 w-4" />
             Salvar
           </Button>
         </div>
       </header>
 
-      {!configuracoesProntas(config) && (
+      {!isLoading && !configuracoesProntas(configAtual) && (
         <Card className="border-amber-900/60 bg-amber-950/30">
           <CardBody className="flex items-start gap-3 text-sm text-amber-200">
             <ShieldCheck className="mt-0.5 h-5 w-5 flex-none" />

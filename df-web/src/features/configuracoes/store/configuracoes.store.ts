@@ -1,9 +1,15 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+/**
+ * Tipos e constantes de configuração de cobrança.
+ *
+ * O state da configuração saiu do `zustand` e passou a ser obtido do backend
+ * df-api via `useConfiguracoes()` em `services/configuracoes.service.ts`.
+ * Este arquivo guarda apenas tipagens, defaults e helpers puros para que
+ * outros módulos (formulários, tabelas) continuem importando como antes.
+ */
 import type { Endereco } from '@/types';
 
 // ---------------------------------------------------------------------------
-// Tipos da configuração de cobrança
+// Tipos
 // ---------------------------------------------------------------------------
 
 export type TipoChavePix =
@@ -14,18 +20,14 @@ export type TipoChavePix =
   | 'ALEATORIA';
 
 export interface DadosBancarios {
-  /** Código FEBRABAN do banco (3 dígitos). */
   codigoBanco: string;
   nomeBanco: string;
   agencia: string;
   agenciaDigito?: string;
   conta: string;
   contaDigito: string;
-  /** Carteira/operação Febraban (ex: 109, 175, 17). */
   carteira: string;
-  /** Convênio (alguns bancos exigem). */
   convenio?: string;
-  /** Próximo "nosso número" sequencial — usado para gerar boletos. */
   proximoNossoNumero: number;
 }
 
@@ -42,15 +44,10 @@ export interface BeneficiarioCobranca {
 }
 
 export interface EncargosCobranca {
-  /** Multa aplicada após o vencimento (% sobre o valor). */
   multaPercentual: number;
-  /** Juros mensais por mora (% ao mês, calculado pro-rata diário). */
   jurosMensalPercentual: number;
-  /** Dias antes do vencimento elegíveis para desconto antecipado. */
   descontoAntecipadoDias: number;
-  /** Percentual de desconto antecipado. */
   descontoPercentual: number;
-  /** Mensagem padrão impressa no boleto. */
   mensagemPadrao?: string;
 }
 
@@ -87,22 +84,22 @@ export const BANCOS_SUPORTADOS: BancoSuportado[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Defaults — preenchidos no primeiro acesso
+// Defaults — usados como fallback enquanto o backend ainda não respondeu
 // ---------------------------------------------------------------------------
 
 export const CONFIG_PADRAO: ConfiguracoesCobranca = {
   beneficiario: {
-    cnpj: '12345678000199',
-    razaoSocial: 'Distribuidora Farias LTDA',
-    nomeFantasia: 'Distribuidora Farias',
+    cnpj: '',
+    razaoSocial: '',
+    nomeFantasia: '',
     endereco: {
-      cep: '01310100',
-      logradouro: 'Av. Paulista',
-      numero: '1500',
-      complemento: 'Andar 12',
-      bairro: 'Bela Vista',
-      cidade: 'São Paulo',
-      uf: 'SP',
+      cep: '',
+      logradouro: '',
+      numero: '',
+      complemento: '',
+      bairro: '',
+      cidade: '',
+      uf: '',
     },
   },
   banco: {
@@ -114,59 +111,20 @@ export const CONFIG_PADRAO: ConfiguracoesCobranca = {
     contaDigito: '',
     carteira: '109',
     convenio: '',
-    proximoNossoNumero: 100001,
+    proximoNossoNumero: 1,
   },
   pix: {
     tipoChave: 'CNPJ',
-    chave: '12345678000199',
+    chave: '',
   },
   encargos: {
-    multaPercentual: 2,
-    jurosMensalPercentual: 1,
+    multaPercentual: 0,
+    jurosMensalPercentual: 0,
     descontoAntecipadoDias: 0,
     descontoPercentual: 0,
-    mensagemPadrao: 'Pagamento referente a fornecimento - Distribuidora Farias',
+    mensagemPadrao: '',
   },
 };
-
-// ---------------------------------------------------------------------------
-// Store persistido em localStorage
-// ---------------------------------------------------------------------------
-
-interface ConfiguracoesState {
-  config: ConfiguracoesCobranca;
-  atualizar: (config: ConfiguracoesCobranca) => void;
-  /** Incrementa e devolve o próximo "nosso número". */
-  consumirNossoNumero: () => number;
-}
-
-export const useConfiguracoesStore = create<ConfiguracoesState>()(
-  persist(
-    (set, get) => ({
-      config: CONFIG_PADRAO,
-      atualizar: (config) => set({ config }),
-      consumirNossoNumero: () => {
-        const atual = get().config.banco.proximoNossoNumero;
-        set({
-          config: {
-            ...get().config,
-            banco: {
-              ...get().config.banco,
-              proximoNossoNumero: atual + 1,
-            },
-          },
-        });
-        return atual;
-      },
-    }),
-    { name: 'df-pagamentos:configuracoes', version: 1 },
-  ),
-);
-
-/** Atalho síncrono para uso em mocks/serviços (fora de componentes React). */
-export function getConfiguracoes(): ConfiguracoesCobranca {
-  return useConfiguracoesStore.getState().config;
-}
 
 /** Verifica se a configuração mínima para gerar cobranças está preenchida. */
 export function configuracoesProntas(config: ConfiguracoesCobranca): boolean {

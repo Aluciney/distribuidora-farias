@@ -1,20 +1,18 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { UUID } from '@/types';
+import { api } from '@/services/api/http';
 
 /**
- * Sessão mockada do sistema. Em produção esta informação virá do JWT/cookie
- * de autenticação. Aqui guardamos o tipo de sessão (ADMIN ou CLIENTE) e o ID
- * correspondente para filtrar dados nas telas protegidas.
+ * Sessão do sistema. O token JWT vive em cookie httpOnly assinado pelo
+ * backend (`df_session`); o store guarda apenas metadados de UI: tipo da
+ * sessão e o id correspondente para enriquecer telas/queries.
  */
 export type TipoSessao = 'ADMIN' | 'CLIENTE';
 
 interface AuthState {
-  /** Tipo da sessão ativa. `null` quando deslogado. */
   tipo: TipoSessao | null;
-  /** ID do usuário admin/financeiro logado. Preenchido quando tipo === 'ADMIN'. */
   usuarioId: UUID | null;
-  /** ID do cliente logado no portal. Preenchido quando tipo === 'CLIENTE'. */
   clienteId: UUID | null;
   loginAdmin: (usuarioId: UUID) => void;
   loginCliente: (clienteId: UUID) => void;
@@ -31,7 +29,14 @@ export const useAuthStore = create<AuthState>()(
         set({ tipo: 'ADMIN', usuarioId, clienteId: null }),
       loginCliente: (clienteId) =>
         set({ tipo: 'CLIENTE', clienteId, usuarioId: null }),
-      logout: () => set({ tipo: null, usuarioId: null, clienteId: null }),
+      logout: () => {
+        // Avisa o backend para invalidar o cookie httpOnly. Fire-and-forget:
+        // a UI já navega para /login independentemente do resultado.
+        api.post('/auth/logout').catch(() => {
+          /* ignora — pode estar offline */
+        });
+        set({ tipo: null, usuarioId: null, clienteId: null });
+      },
     }),
     { name: 'df-pagamentos:auth', version: 2 },
   ),

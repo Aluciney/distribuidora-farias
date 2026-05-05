@@ -15,10 +15,8 @@ import {
   novaCobrancaSchema,
   type NovaCobrancaFormValues,
 } from '@/features/cobrancas/schemas/cobranca.schema';
-import {
-  configuracoesProntas,
-  useConfiguracoesStore,
-} from '@/features/configuracoes/store/configuracoes.store';
+import { configuracoesProntas, CONFIG_PADRAO } from '@/features/configuracoes/store/configuracoes.store';
+import { useConfiguracoes } from '@/features/configuracoes/services/configuracoes.service';
 import { formatCurrency, formatCNPJ } from '@/utils/format';
 
 interface NovaCobrancaModalProps {
@@ -35,8 +33,8 @@ function dataPadraoVencimento(): string {
 export function NovaCobrancaModal({ aberto, onFechar }: NovaCobrancaModalProps) {
   const { data: pedidos, isLoading: pedidosLoading } = usePedidosFaturaveis();
   const criar = useCriarCobranca();
-  const config = useConfiguracoesStore((s) => s.config);
-  const configOk = configuracoesProntas(config);
+  const { data: config } = useConfiguracoes();
+  const configOk = configuracoesProntas(config ?? CONFIG_PADRAO);
 
   const {
     register,

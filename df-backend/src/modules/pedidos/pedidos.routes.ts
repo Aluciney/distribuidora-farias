@@ -14,10 +14,17 @@ const itemPedidoSchema = z.object({
 	valorTotal: z.number(),
 })
 
+const clienteResumoSchema = z.object({
+	id: z.string(),
+	cnpj: z.string(),
+	razaoSocial: z.string(),
+})
+
 const pedidoBaseSchema = z.object({
 	id: z.string(),
 	numero: z.string(),
 	clienteId: z.string(),
+	cliente: clienteResumoSchema.nullable(),
 	valorTotal: z.number(),
 	status: z.enum(['ABERTO', 'FATURADO', 'ENTREGUE', 'CANCELADO']),
 	emitidoEm: z.string().datetime(),
@@ -41,11 +48,12 @@ function serializarItem(i: ItemPedido) {
 	}
 }
 
-function serializarPedido(p: Pedido) {
+function serializarPedido(p: Pedido & { cliente?: { id: string; cnpj: string; razaoSocial: string } | null }) {
 	return {
 		id: p.id,
 		numero: p.numero,
 		clienteId: p.clienteId,
+		cliente: p.cliente ? { id: p.cliente.id, cnpj: p.cliente.cnpj, razaoSocial: p.cliente.razaoSocial } : null,
 		valorTotal: p.valorTotal,
 		status: p.status,
 		emitidoEm: p.emitidoEm.toISOString(),
@@ -82,6 +90,7 @@ export async function rotasPedidos(app: FastifyInstance) {
 					status: req.query.status,
 					...(req.query.busca ? { numero: { contains: req.query.busca, mode: 'insensitive' } } : {}),
 				},
+				include: { cliente: { select: { id: true, cnpj: true, razaoSocial: true } } },
 				orderBy: { emitidoEm: 'desc' },
 			})
 			return { itens: itens.map(serializarPedido) }
@@ -102,6 +111,7 @@ export async function rotasPedidos(app: FastifyInstance) {
 		async () => {
 			const itens = await app.prisma.pedido.findMany({
 				where: { status: { in: ['ABERTO', 'FATURADO'] } },
+				include: { cliente: { select: { id: true, cnpj: true, razaoSocial: true } } },
 				orderBy: { emitidoEm: 'desc' },
 			})
 			return { itens: itens.map(serializarPedido) }
@@ -123,7 +133,10 @@ export async function rotasPedidos(app: FastifyInstance) {
 		async (req) => {
 			const pedido = await app.prisma.pedido.findUnique({
 				where: { id: req.params.id },
-				include: { itens: true },
+				include: {
+					itens: true,
+					cliente: { select: { id: true, cnpj: true, razaoSocial: true } },
+				},
 			})
 			if (!pedido) throw new NaoEncontrado('Pedido', req.params.id)
 			return { ...serializarPedido(pedido), itens: pedido.itens.map(serializarItem) }
