@@ -1,0 +1,6 @@
+export { ErroDeDominio } from './erro-dominio'
+export { NaoEncontrado } from './nao-encontrado'
+export { Conflito } from './conflito'
+export { NaoAutorizado } from './nao-autorizado'
+export { Proibido } from './proibido'
+export { RegraNegocio } from './regra-negocio'

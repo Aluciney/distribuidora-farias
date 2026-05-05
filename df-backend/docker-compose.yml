@@ -1,0 +1,29 @@
+version: '3.9'
+
+services:
+  postgres-dev:
+    image: postgres:16-alpine
+    container_name: df-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: df
+      POSTGRES_PASSWORD: df
+      POSTGRES_DB: df_dev
+    ports:
+      - '5432:5432'
+    volumes:
+      - df-postgres-dev:/var/lib/postgresql/data
+
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: df-postgres-test
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: df
+      POSTGRES_PASSWORD: df
+      POSTGRES_DB: df_test
+    ports:
+      - '5433:5432'
+
+volumes:
+  df-postgres-dev:

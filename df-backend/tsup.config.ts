@@ -1,11 +1,13 @@
 import { defineConfig } from 'tsup'
 
 export default defineConfig({
-	entry: ['**/*.ts', '!node_modules', '!dist'],
+	entry: ['src/**/*.ts'],
 	outDir: 'dist',
 	clean: true,
-	dts: true,
+	dts: false,
 	format: ['cjs'],
+	target: 'node22',
+	sourcemap: true,
 	loader: {
 		'.sql': 'copy',
 		'.html': 'copy',

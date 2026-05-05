@@ -1,13 +1,25 @@
 {
-  "name": "df-backend",
+  "name": "df-api",
   "version": "1.0.0",
-  "description": "",
+  "description": "Backend do sistema de pagamentos da Distribuidora Farias.",
   "main": "dist/src/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsup",
     "start": "node dist/src/server.js",
-    "test": "jest"
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage --runInBand",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:seed": "tsx prisma/seed.ts",
+    "prisma:studio": "prisma studio",
+    "lint": "biome lint .",
+    "format": "biome format --write ."
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "keywords": [],
   "author": "Aluciney Wanderley <aluciney.wanderley@gmail.com>",
@@ -19,20 +31,27 @@
     "@fastify/jwt": "^10.0.0",
     "@fastify/swagger": "^9.7.0",
     "@fastify/swagger-ui": "^5.2.6",
+    "@prisma/client": "^5.22.0",
     "@smithy/uuid": "^1.1.2",
     "axios": "^1.16.0",
+    "bcrypt": "^5.1.1",
     "date-fns": "^4.1.0",
     "dotenv": "^17.4.2",
     "fastify": "^5.8.5",
+    "fastify-plugin": "^5.0.1",
     "fastify-type-provider-zod": "^6.1.0",
+    "node-cron": "^3.0.3",
     "tsup": "^8.5.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.14",
+    "@types/bcrypt": "^5.0.2",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.6.0",
+    "@types/node-cron": "^3.0.11",
     "jest": "^30.3.0",
+    "prisma": "^5.22.0",
     "ts-jest": "^29.4.9",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3"
