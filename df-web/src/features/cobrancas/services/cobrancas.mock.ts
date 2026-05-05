@@ -53,7 +53,7 @@ function ehCliente(): boolean {
 }
 
 const PAGINA_PADRAO = 1;
-const POR_PAGINA_MAX = 1000;
+const POR_PAGINA_MAX = 100;
 
 interface ListagemAdminDTO {
   itens: FaturaDTO[];
