@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
   Pencil,
@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { Switch } from '@/components/ui/Switch';
 import { Select } from '@/components/ui/Select';
+import { Pagination } from '@/components/ui/Pagination';
 import { UsuarioFormModal } from '@/features/usuarios/components/UsuarioFormModal';
 import {
   useAlternarUsuarioAtivo,
@@ -41,9 +42,15 @@ export function UsuariosPage() {
   const [busca, setBusca] = useState('');
   const [perfilFiltro, setPerfilFiltro] = useState<FiltroPerfil>('TODOS');
   const [ativoFiltro, setAtivoFiltro] = useState<FiltroAtivo>('TODOS');
+  const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(10);
 
   const [modalAberto, setModalAberto] = useState(false);
   const [usuarioEditando, setUsuarioEditando] = useState<Usuario | undefined>();
+
+  useEffect(() => {
+    setPagina(1);
+  }, [busca, perfilFiltro, ativoFiltro, porPagina]);
 
   const filtros = useMemo(
     () => ({
@@ -53,12 +60,16 @@ export function UsuariosPage() {
         ativoFiltro === 'TODOS'
           ? ('TODOS' as const)
           : ativoFiltro === 'ATIVOS',
+      pagina,
+      porPagina,
     }),
-    [busca, perfilFiltro, ativoFiltro],
+    [busca, perfilFiltro, ativoFiltro, pagina, porPagina],
   );
 
-  const { data: usuarios, isLoading, isError, refetch } = useUsuarios(filtros);
+  const { data, isLoading, isError, refetch } = useUsuarios(filtros);
   const alternar = useAlternarUsuarioAtivo();
+  const usuarios = data?.itens;
+  const total = data?.total ?? 0;
 
   const abrirCadastro = () => {
     setUsuarioEditando(undefined);
@@ -68,9 +79,6 @@ export function UsuariosPage() {
     setUsuarioEditando(u);
     setModalAberto(true);
   };
-
-  const total = usuarios?.length ?? 0;
-  const totalAtivos = usuarios?.filter((u) => u.ativo).length ?? 0;
 
   return (
     <div className="space-y-6">
@@ -167,14 +175,14 @@ export function UsuariosPage() {
               alternandoId={alternar.isPending ? alternar.variables : undefined}
             />
           )}
-
-          <p className="text-xs text-slate-500">
-            <strong className="text-slate-300">{total}</strong> usuário
-            {total === 1 ? '' : 's'} —{' '}
-            <strong className="text-emerald-300">{totalAtivos}</strong> ativo
-            {totalAtivos === 1 ? '' : 's'}.
-          </p>
         </CardBody>
+        <Pagination
+          pagina={pagina}
+          porPagina={porPagina}
+          total={total}
+          onPaginaChange={setPagina}
+          onPorPaginaChange={setPorPagina}
+        />
       </Card>
 
       <UsuarioFormModal

@@ -153,7 +153,7 @@ export const FaturaImprimivel = forwardRef<HTMLDivElement, FaturaImprimivelProps
         <div className="fi-section">
           <div className="fi-label">Boleto bancário</div>
           <div style={{ marginTop: 8 }}>
-            <BoletoBarcode codigo={fatura.boleto.codigoBarras} altura={56} larguraBarra={1.5} />
+            <BoletoBarcode codigo={fatura.boleto.codigoBarras} altura={56} />
           </div>
           <div className="fi-card" style={{ marginTop: 8 }}>
             <div className="fi-label">Linha digitável</div>

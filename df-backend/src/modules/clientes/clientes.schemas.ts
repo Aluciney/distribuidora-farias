@@ -39,6 +39,8 @@ export const clienteSchema = z.object({
 export const listarClientesQuerySchema = z.object({
 	busca: z.string().optional(),
 	status: statusClienteSchema.optional(),
+	pagina: z.coerce.number().int().positive().default(1),
+	porPagina: z.coerce.number().int().positive().max(100).default(10),
 })
 
 export const criarClienteInputSchema = z.object({

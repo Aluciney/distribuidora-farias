@@ -22,22 +22,35 @@ const SENHA_PADRAO_NOVO_USUARIO = 'df2026'
 export class UsuariosService {
 	constructor(private readonly prisma: PrismaClient) {}
 
-	async listar(filtros: { busca?: string; perfil?: Perfil; ativo?: boolean }): Promise<Usuario[]> {
-		return this.prisma.usuario.findMany({
-			where: {
-				perfil: filtros.perfil,
-				ativo: filtros.ativo,
-				...(filtros.busca
-					? {
-							OR: [
-								{ nome: { contains: filtros.busca, mode: 'insensitive' } },
-								{ email: { contains: filtros.busca, mode: 'insensitive' } },
-							],
-						}
-					: {}),
-			},
-			orderBy: { nome: 'asc' },
-		})
+	async listar(filtros: {
+		busca?: string
+		perfil?: Perfil
+		ativo?: boolean
+		pagina: number
+		porPagina: number
+	}): Promise<{ itens: Usuario[]; total: number }> {
+		const where = {
+			perfil: filtros.perfil,
+			ativo: filtros.ativo,
+			...(filtros.busca
+				? {
+						OR: [
+							{ nome: { contains: filtros.busca, mode: 'insensitive' as const } },
+							{ email: { contains: filtros.busca, mode: 'insensitive' as const } },
+						],
+					}
+				: {}),
+		}
+		const [itens, total] = await Promise.all([
+			this.prisma.usuario.findMany({
+				where,
+				orderBy: { nome: 'asc' },
+				skip: (filtros.pagina - 1) * filtros.porPagina,
+				take: filtros.porPagina,
+			}),
+			this.prisma.usuario.count({ where }),
+		])
+		return { itens, total }
 	}
 
 	async obter(id: string): Promise<Usuario> {

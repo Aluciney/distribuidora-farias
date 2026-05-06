@@ -38,7 +38,7 @@ export async function rotasProdutos(app: FastifyInstance) {
 		{
 			schema: {
 				tags: ['Produtos'],
-				summary: 'Lista produtos (read-only do ERP)',
+				summary: 'Lista produtos paginados (read-only do ERP)',
 				security: [{ cookieAuth: [] }, { bearerAuth: [] }],
 				querystring: z.object({
 					busca: z.string().optional(),
@@ -46,27 +46,47 @@ export async function rotasProdutos(app: FastifyInstance) {
 						.enum(['true', 'false'])
 						.optional()
 						.transform((v) => (v === undefined ? undefined : v === 'true')),
+					pagina: z.coerce.number().int().positive().default(1),
+					porPagina: z.coerce.number().int().positive().max(100).default(10),
 				}),
-				response: { 200: z.object({ itens: z.array(produtoSchema) }) },
+				response: {
+					200: z.object({
+						itens: z.array(produtoSchema),
+						total: z.number(),
+						pagina: z.number(),
+						porPagina: z.number(),
+					}),
+				},
 			},
 			preHandler: guard,
 		},
 		async (req) => {
-			const itens = await app.prisma.produto.findMany({
-				where: {
-					ativo: req.query.ativo,
-					...(req.query.busca
-						? {
-								OR: [
-									{ sku: { contains: req.query.busca, mode: 'insensitive' } },
-									{ descricao: { contains: req.query.busca, mode: 'insensitive' } },
-								],
-							}
-						: {}),
-				},
-				orderBy: { sku: 'asc' },
-			})
-			return { itens: itens.map(serializar) }
+			const where = {
+				ativo: req.query.ativo,
+				...(req.query.busca
+					? {
+							OR: [
+								{ sku: { contains: req.query.busca, mode: 'insensitive' as const } },
+								{ descricao: { contains: req.query.busca, mode: 'insensitive' as const } },
+							],
+						}
+					: {}),
+			}
+			const [itens, total] = await Promise.all([
+				app.prisma.produto.findMany({
+					where,
+					orderBy: { sku: 'asc' },
+					skip: (req.query.pagina - 1) * req.query.porPagina,
+					take: req.query.porPagina,
+				}),
+				app.prisma.produto.count({ where }),
+			])
+			return {
+				itens: itens.map(serializar),
+				total,
+				pagina: req.query.pagina,
+				porPagina: req.query.porPagina,
+			}
 		},
 	)
 }

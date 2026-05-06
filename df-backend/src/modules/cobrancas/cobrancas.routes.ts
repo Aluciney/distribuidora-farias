@@ -190,16 +190,36 @@ export async function rotasCobrancasCliente(app: FastifyInstance) {
 		{
 			schema: {
 				tags: ['Cobranças (cliente)'],
-				summary: 'Lista faturas do cliente logado',
+				summary: 'Lista faturas do cliente logado (paginado)',
 				security: [{ cookieAuth: [] }, { bearerAuth: [] }],
-				querystring: z.object({ status: statusFaturaSchema.optional() }),
-				response: { 200: z.object({ itens: z.array(faturaSchema) }) },
+				querystring: z.object({
+					status: statusFaturaSchema.optional(),
+					pagina: z.coerce.number().int().positive().default(1),
+					porPagina: z.coerce.number().int().positive().max(100).default(10),
+				}),
+				response: {
+					200: z.object({
+						itens: z.array(faturaSchema),
+						total: z.number(),
+						pagina: z.number(),
+						porPagina: z.number(),
+					}),
+				},
 			},
 			preHandler: guard,
 		},
 		async (req) => {
-			const itens = await service.listarPorCliente(req.sessao.sub, req.query.status)
-			return { itens: itens.map(serializarFatura) }
+			const { itens, total } = await service.listarPorCliente(req.sessao.sub, {
+				status: req.query.status,
+				pagina: req.query.pagina,
+				porPagina: req.query.porPagina,
+			})
+			return {
+				itens: itens.map(serializarFatura),
+				total,
+				pagina: req.query.pagina,
+				porPagina: req.query.porPagina,
+			}
 		},
 	)
 

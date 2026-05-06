@@ -9,12 +9,24 @@ import { apenasDigitos } from '@/utils/cnpj';
 export interface FiltrosClientes {
   busca?: string;
   status?: StatusCliente | 'TODOS';
+  pagina?: number;
+  porPagina?: number;
 }
 
 export type DadosCliente = Omit<Cliente, 'id' | 'criadoEm' | 'atualizadoEm'>;
 
 interface ListagemDTO {
   itens: ClienteDTO[];
+  total: number;
+  pagina: number;
+  porPagina: number;
+}
+
+export interface ListagemClientes {
+  itens: Cliente[];
+  total: number;
+  pagina: number;
+  porPagina: number;
 }
 
 function toBackendBody(dados: DadosCliente) {
@@ -41,12 +53,19 @@ function toBackendBody(dados: DadosCliente) {
 }
 
 export const clientesService = {
-  async listar(filtros: FiltrosClientes = {}): Promise<Cliente[]> {
-    const { itens } = await api.get<ListagemDTO>('/admin/clientes', {
+  async listar(filtros: FiltrosClientes = {}): Promise<ListagemClientes> {
+    const dto = await api.get<ListagemDTO>('/admin/clientes', {
       busca: filtros.busca,
       status: filtros.status && filtros.status !== 'TODOS' ? filtros.status : undefined,
+      pagina: filtros.pagina,
+      porPagina: filtros.porPagina,
     });
-    return itens.map(fromClienteDTO);
+    return {
+      itens: dto.itens.map(fromClienteDTO),
+      total: dto.total,
+      pagina: dto.pagina,
+      porPagina: dto.porPagina,
+    };
   },
 
   async obter(id: UUID): Promise<Cliente | undefined> {

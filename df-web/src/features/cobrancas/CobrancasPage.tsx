@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
   CheckCircle2,
@@ -10,6 +10,7 @@ import {
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Pagination } from '@/components/ui/Pagination';
 import { useFaturas } from '@/features/cobrancas/hooks/useCobrancas';
 import { FaturasTabela } from '@/features/cobrancas/components/FaturasTabela';
 import { NovaCobrancaModal } from '@/features/cobrancas/components/NovaCobrancaModal';
@@ -70,22 +71,32 @@ function calcularKpis(faturas: Fatura[]): ResumoKpis {
 export function CobrancasPage() {
   const [busca, setBusca] = useState('');
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>('TODOS');
+  const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(10);
 
   const [novaCobrancaAberta, setNovaCobrancaAberta] = useState(false);
   const [detalhesFatura, setDetalhesFatura] = useState<Fatura | null>(null);
   const [baixaFatura, setBaixaFatura] = useState<Fatura | null>(null);
   const [cancelarFatura, setCancelarFatura] = useState<Fatura | null>(null);
 
+  useEffect(() => {
+    setPagina(1);
+  }, [busca, statusFiltro, porPagina]);
+
   const filtros = useMemo(
-    () => ({ busca, status: statusFiltro }),
-    [busca, statusFiltro],
+    () => ({ busca, status: statusFiltro, pagina, porPagina }),
+    [busca, statusFiltro, pagina, porPagina],
   );
-  const { data: faturas, isLoading, isError, refetch } = useFaturas(filtros);
-  const { data: faturasGlobal } = useFaturas({ busca: '' });
+  const { data, isLoading, isError, refetch } = useFaturas(filtros);
+  // KPIs precisam de visão global — buscamos até 100 faturas independente do filtro de UI.
+  const { data: dadosGlobais } = useFaturas({ porPagina: 100 });
+
+  const faturas = data?.itens;
+  const total = data?.total ?? 0;
 
   const kpis = useMemo(
-    () => calcularKpis(faturasGlobal ?? []),
-    [faturasGlobal],
+    () => calcularKpis(dadosGlobais?.itens ?? []),
+    [dadosGlobais],
   );
 
   return (
@@ -208,21 +219,21 @@ export function CobrancasPage() {
               </Button>
             </div>
           ) : (
-            <>
-              <FaturasTabela
-                faturas={faturas}
-                onAbrirDetalhes={setDetalhesFatura}
-                onBaixarManual={setBaixaFatura}
-                onCancelarFatura={setCancelarFatura}
-              />
-              <p className="text-xs text-slate-500">
-                Exibindo{' '}
-                <strong className="text-slate-300">{faturas.length}</strong>{' '}
-                cobrança{faturas.length === 1 ? '' : 's'}.
-              </p>
-            </>
+            <FaturasTabela
+              faturas={faturas}
+              onAbrirDetalhes={setDetalhesFatura}
+              onBaixarManual={setBaixaFatura}
+              onCancelarFatura={setCancelarFatura}
+            />
           )}
         </CardBody>
+        <Pagination
+          pagina={pagina}
+          porPagina={porPagina}
+          total={total}
+          onPaginaChange={setPagina}
+          onPorPaginaChange={setPorPagina}
+        />
       </Card>
 
       <NovaCobrancaModal

@@ -9,16 +9,28 @@ export interface FiltrosUsuarios {
   busca?: string;
   perfil?: PerfilUsuario | 'TODOS';
   ativo?: boolean | 'TODOS';
+  pagina?: number;
+  porPagina?: number;
+}
+
+export interface ListagemUsuarios {
+  itens: Usuario[];
+  total: number;
+  pagina: number;
+  porPagina: number;
 }
 
 export type DadosUsuario = Omit<Usuario, 'id' | 'criadoEm' | 'ultimoAcesso'>;
 
 interface ListagemDTO {
   itens: UsuarioDTO[];
+  total: number;
+  pagina: number;
+  porPagina: number;
 }
 
 export const usuariosService = {
-  async listar(filtros: FiltrosUsuarios = {}): Promise<Usuario[]> {
+  async listar(filtros: FiltrosUsuarios = {}): Promise<ListagemUsuarios> {
     const perfil =
       filtros.perfil && filtros.perfil !== 'TODOS' && filtros.perfil !== 'CLIENTE'
         ? filtros.perfil
@@ -27,12 +39,19 @@ export const usuariosService = {
       filtros.ativo === undefined || filtros.ativo === 'TODOS'
         ? undefined
         : String(filtros.ativo);
-    const { itens } = await api.get<ListagemDTO>('/admin/usuarios', {
+    const dto = await api.get<ListagemDTO>('/admin/usuarios', {
       busca: filtros.busca,
       perfil,
       ativo,
+      pagina: filtros.pagina,
+      porPagina: filtros.porPagina,
     });
-    return itens.map(fromUsuarioDTO);
+    return {
+      itens: dto.itens.map(fromUsuarioDTO),
+      total: dto.total,
+      pagina: dto.pagina,
+      porPagina: dto.porPagina,
+    };
   },
 
   async obter(id: UUID): Promise<Usuario | undefined> {

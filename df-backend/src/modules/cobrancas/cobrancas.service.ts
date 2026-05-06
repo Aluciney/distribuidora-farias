@@ -65,12 +65,22 @@ export class CobrancasService {
 		return { itens, total }
 	}
 
-	async listarPorCliente(clienteId: string, status?: StatusFatura): Promise<(Fatura & { cliente: Cliente })[]> {
-		return this.prisma.fatura.findMany({
-			where: { clienteId, status },
-			include: { cliente: true },
-			orderBy: { dataVencimento: 'desc' },
-		})
+	async listarPorCliente(
+		clienteId: string,
+		filtros: { status?: StatusFatura; pagina: number; porPagina: number },
+	): Promise<{ itens: (Fatura & { cliente: Cliente })[]; total: number }> {
+		const where = { clienteId, status: filtros.status }
+		const [itens, total] = await Promise.all([
+			this.prisma.fatura.findMany({
+				where,
+				include: { cliente: true },
+				orderBy: { dataVencimento: 'desc' },
+				skip: (filtros.pagina - 1) * filtros.porPagina,
+				take: filtros.porPagina,
+			}),
+			this.prisma.fatura.count({ where }),
+		])
+		return { itens, total }
 	}
 
 	async obter(id: string): Promise<Fatura & { cliente: Cliente }> {

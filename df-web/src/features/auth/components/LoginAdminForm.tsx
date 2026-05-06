@@ -40,7 +40,7 @@ export function LoginAdminForm() {
   });
 
   const preencherDemo = () => {
-    setValue('email', 'aluciney.wanderley@distribuidorafarias.com.br');
+    setValue('email', 'aluciney@df.com');
     setValue('senha', SENHA_DEMO);
     setErro(null);
   };

@@ -67,7 +67,7 @@ export const listarCobrancasQuerySchema = z.object({
 	status: statusFaturaSchema.optional(),
 	clienteId: z.string().uuid().optional(),
 	pagina: z.coerce.number().int().positive().default(1),
-	porPagina: z.coerce.number().int().positive().max(100).default(20),
+	porPagina: z.coerce.number().int().positive().max(100).default(10),
 })
 
 export const criarCobrancaInputSchema = z.object({

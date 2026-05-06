@@ -67,10 +67,11 @@ function calcularResumo(faturas: Fatura[]): ResumoCliente {
 
 export function DashboardClientePage() {
   const { data: cliente } = useClienteLogado();
-  const { data: faturas, isLoading, isError } = useFaturasCliente({
+  const { data, isLoading, isError } = useFaturasCliente({
     status: 'TODOS',
+    porPagina: 100,
   });
-  const resumo = useMemo(() => calcularResumo(faturas ?? []), [faturas]);
+  const resumo = useMemo(() => calcularResumo(data?.itens ?? []), [data]);
   const [faturaSelecionada, setFaturaSelecionada] = useState<Fatura | null>(
     null,
   );

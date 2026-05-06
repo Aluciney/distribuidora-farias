@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { AlertCircle, FileText } from 'lucide-react';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Pagination } from '@/components/ui/Pagination';
 import { FaturasClienteTabela } from '@/features/cliente-portal/faturas/components/FaturasClienteTabela';
 import { PagamentoModal } from '@/features/cliente-portal/faturas/components/PagamentoModal';
 import { useFaturasCliente } from '@/features/cliente-portal/faturas/hooks/useFaturasCliente';
@@ -27,21 +28,29 @@ export function FaturasClientePage() {
   const navigate = useNavigate();
   const { id: faturaIdRota } = useParams<{ id?: string }>();
   const [aba, setAba] = useState<Aba>('ABERTOS');
+  const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(10);
   const [faturaSelecionada, setFaturaSelecionada] = useState<Fatura | null>(
     null,
   );
 
+  useEffect(() => {
+    setPagina(1);
+  }, [aba, porPagina]);
+
   const filtro = useMemo(
-    () => ({ status: statusFiltradoParaAba(aba) }),
-    [aba],
+    () => ({ status: statusFiltradoParaAba(aba), pagina, porPagina }),
+    [aba, pagina, porPagina],
   );
-  const { data: faturas, isLoading, isError, refetch } = useFaturasCliente(filtro);
+  const { data, isLoading, isError, refetch } = useFaturasCliente(filtro);
+  const faturas = data?.itens;
+  const total = data?.total ?? 0;
 
   // Quando há um id na URL (ex: /cliente/faturas/fat-001), abre o modal correspondente.
-  const { data: todasFaturas } = useFaturasCliente({ status: 'TODOS' });
+  const { data: todasFaturas } = useFaturasCliente({ status: 'TODOS', porPagina: 100 });
   useEffect(() => {
     if (!faturaIdRota || !todasFaturas) return;
-    const f = todasFaturas.find((x) => x.id === faturaIdRota);
+    const f = todasFaturas.itens.find((x) => x.id === faturaIdRota);
     if (f) setFaturaSelecionada(f);
   }, [faturaIdRota, todasFaturas]);
 
@@ -121,6 +130,13 @@ export function FaturasClientePage() {
             />
           )}
         </CardBody>
+        <Pagination
+          pagina={pagina}
+          porPagina={porPagina}
+          total={total}
+          onPaginaChange={setPagina}
+          onPorPaginaChange={setPorPagina}
+        />
       </Card>
 
       <PagamentoModal

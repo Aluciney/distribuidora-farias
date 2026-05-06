@@ -48,16 +48,28 @@ export async function rotasClientes(app: FastifyInstance) {
 		{
 			schema: {
 				tags: ['Clientes'],
-				summary: 'Lista clientes',
+				summary: 'Lista clientes (paginado)',
 				security: [{ cookieAuth: [] }, { bearerAuth: [] }],
 				querystring: listarClientesQuerySchema,
-				response: { 200: z.object({ itens: z.array(clienteSchema) }) },
+				response: {
+					200: z.object({
+						itens: z.array(clienteSchema),
+						total: z.number(),
+						pagina: z.number(),
+						porPagina: z.number(),
+					}),
+				},
 			},
 			preHandler: guard,
 		},
 		async (req) => {
-			const itens = await service.listar(req.query)
-			return { itens: itens.map(serializarCliente) }
+			const { itens, total } = await service.listar(req.query)
+			return {
+				itens: itens.map(serializarCliente),
+				total,
+				pagina: req.query.pagina,
+				porPagina: req.query.porPagina,
+			}
 		},
 	)
 

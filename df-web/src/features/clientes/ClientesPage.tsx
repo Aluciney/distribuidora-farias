@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Plus, Search, Users, AlertCircle } from 'lucide-react';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Pagination } from '@/components/ui/Pagination';
 import { ClienteFormModal } from '@/features/clientes/components/ClienteFormModal';
 import { ClientesTabela } from '@/features/clientes/components/ClientesTabela';
 import {
@@ -30,18 +31,27 @@ const ABAS: AbaFiltro[] = [
 export function ClientesPage() {
   const [busca, setBusca] = useState('');
   const [statusFiltro, setStatusFiltro] = useState<FiltroStatus>('TODOS');
+  const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(10);
   const [modalAberto, setModalAberto] = useState(false);
   const [clienteEditando, setClienteEditando] = useState<Cliente | undefined>();
   const [clienteParaStatus, setClienteParaStatus] = useState<Cliente | null>(
     null,
   );
 
+  // Volta para a primeira página sempre que filtros mudam.
+  useEffect(() => {
+    setPagina(1);
+  }, [busca, statusFiltro, porPagina]);
+
   const filtros = useMemo(
-    () => ({ busca, status: statusFiltro }),
-    [busca, statusFiltro],
+    () => ({ busca, status: statusFiltro, pagina, porPagina }),
+    [busca, statusFiltro, pagina, porPagina],
   );
-  const { data: clientes, isLoading, isError, refetch } = useClientes(filtros);
+  const { data, isLoading, isError, refetch } = useClientes(filtros);
   const alterarStatus = useAlterarStatusCliente();
+  const clientes = data?.itens;
+  const total = data?.total ?? 0;
 
   const abrirCadastro = () => {
     setClienteEditando(undefined);
@@ -65,10 +75,6 @@ export function ClientesPage() {
     });
     setClienteParaStatus(null);
   };
-
-  const totalAtivos =
-    clientes?.filter((c) => c.status === StatusCliente.ATIVO).length ?? 0;
-  const total = clientes?.length ?? 0;
 
   return (
     <div className="space-y-6">
@@ -158,21 +164,20 @@ export function ClientesPage() {
               </Button>
             </div>
           ) : (
-            <>
-              <ClientesTabela
-                clientes={clientes}
-                onEditar={abrirEdicao}
-                onAlterarStatus={setClienteParaStatus}
-              />
-              <p className="text-xs text-slate-500">
-                Exibindo <strong className="text-slate-300">{total}</strong>{' '}
-                cliente{total === 1 ? '' : 's'} —{' '}
-                <strong className="text-emerald-300">{totalAtivos}</strong>{' '}
-                ativo{totalAtivos === 1 ? '' : 's'}.
-              </p>
-            </>
+            <ClientesTabela
+              clientes={clientes}
+              onEditar={abrirEdicao}
+              onAlterarStatus={setClienteParaStatus}
+            />
           )}
         </CardBody>
+        <Pagination
+          pagina={pagina}
+          porPagina={porPagina}
+          total={total}
+          onPaginaChange={setPagina}
+          onPorPaginaChange={setPorPagina}
+        />
       </Card>
 
       <ClienteFormModal

@@ -20,6 +20,15 @@ export interface FiltrosFaturas {
   status?: StatusFiltro;
   /** Restringe ao próprio cliente; usado nos hooks do portal `/cliente`. */
   clienteId?: UUID;
+  pagina?: number;
+  porPagina?: number;
+}
+
+export interface ListagemFaturas {
+  itens: Fatura[];
+  total: number;
+  pagina: number;
+  porPagina: number;
 }
 
 export interface NovaCobrancaPayload {
@@ -52,18 +61,11 @@ function ehCliente(): boolean {
   return useAuthStore.getState().tipo === 'CLIENTE';
 }
 
-const PAGINA_PADRAO = 1;
-const POR_PAGINA_MAX = 100;
-
-interface ListagemAdminDTO {
+interface ListagemDTO {
   itens: FaturaDTO[];
   total: number;
   pagina: number;
   porPagina: number;
-}
-
-interface ListagemClienteDTO {
-  itens: FaturaDTO[];
 }
 
 function statusParam(status?: StatusFiltro): string | undefined {
@@ -72,31 +74,21 @@ function statusParam(status?: StatusFiltro): string | undefined {
 }
 
 export const cobrancasService = {
-  async listar(filtros: FiltrosFaturas = {}): Promise<Fatura[]> {
-    if (ehCliente()) {
-      const { itens } = await api.get<ListagemClienteDTO>('/cliente/faturas', {
-        status: statusParam(filtros.status),
-      });
-      // Aplica filtro de busca em memória (cliente vê apenas seu portfolio).
-      const buscaNorm = (filtros.busca ?? '').trim().toLowerCase();
-      return itens
-        .map(fromFaturaDTO)
-        .filter((f) =>
-          buscaNorm
-            ? f.numero.toLowerCase().includes(buscaNorm) ||
-              (f.cliente?.razaoSocial.toLowerCase().includes(buscaNorm) ?? false)
-            : true,
-        );
-    }
-
-    const { itens } = await api.get<ListagemAdminDTO>('/admin/cobrancas', {
-      busca: filtros.busca,
+  async listar(filtros: FiltrosFaturas = {}): Promise<ListagemFaturas> {
+    const path = ehCliente() ? '/cliente/faturas' : '/admin/cobrancas';
+    const dto = await api.get<ListagemDTO>(path, {
+      busca: ehCliente() ? undefined : filtros.busca,
       status: statusParam(filtros.status),
-      clienteId: filtros.clienteId,
-      pagina: PAGINA_PADRAO,
-      porPagina: POR_PAGINA_MAX,
+      clienteId: ehCliente() ? undefined : filtros.clienteId,
+      pagina: filtros.pagina,
+      porPagina: filtros.porPagina,
     });
-    return itens.map(fromFaturaDTO);
+    return {
+      itens: dto.itens.map(fromFaturaDTO),
+      total: dto.total,
+      pagina: dto.pagina,
+      porPagina: dto.porPagina,
+    };
   },
 
   async obter(id: UUID): Promise<Fatura | undefined> {

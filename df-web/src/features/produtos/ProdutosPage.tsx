@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
   Boxes,
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { Select } from '@/components/ui/Select';
+import { Pagination } from '@/components/ui/Pagination';
 import { useProdutos } from '@/features/produtos/hooks/useProdutos';
 import type { FiltroAtivoProduto } from '@/features/produtos/services/produtos.mock';
 import type { Produto } from '@/types';
@@ -21,15 +22,20 @@ import { cn } from '@/lib/cn';
 export function ProdutosPage() {
   const [busca, setBusca] = useState('');
   const [ativoFiltro, setAtivoFiltro] = useState<FiltroAtivoProduto>('TODOS');
+  const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(10);
+
+  useEffect(() => {
+    setPagina(1);
+  }, [busca, ativoFiltro, porPagina]);
 
   const filtros = useMemo(
-    () => ({ busca, ativo: ativoFiltro }),
-    [busca, ativoFiltro],
+    () => ({ busca, ativo: ativoFiltro, pagina, porPagina }),
+    [busca, ativoFiltro, pagina, porPagina],
   );
-  const { data: produtos, isLoading, isError, refetch } = useProdutos(filtros);
-
-  const total = produtos?.length ?? 0;
-  const ativos = produtos?.filter((p) => p.ativo).length ?? 0;
+  const { data, isLoading, isError, refetch } = useProdutos(filtros);
+  const produtos = data?.itens;
+  const total = data?.total ?? 0;
 
   return (
     <div className="space-y-6">
@@ -108,14 +114,14 @@ export function ProdutosPage() {
           ) : (
             <ProdutosListagem produtos={produtos} />
           )}
-
-          <p className="text-xs text-slate-500">
-            <strong className="text-slate-300">{total}</strong> produto
-            {total === 1 ? '' : 's'} —{' '}
-            <strong className="text-emerald-300">{ativos}</strong> ativo
-            {ativos === 1 ? '' : 's'} no estoque.
-          </p>
         </CardBody>
+        <Pagination
+          pagina={pagina}
+          porPagina={porPagina}
+          total={total}
+          onPaginaChange={setPagina}
+          onPorPaginaChange={setPorPagina}
+        />
       </Card>
     </div>
   );

@@ -10,16 +10,39 @@ export type FiltroAtivoProduto = 'TODOS' | 'ATIVOS' | 'INATIVOS';
 export interface FiltrosProdutos {
   busca?: string;
   ativo?: FiltroAtivoProduto;
+  pagina?: number;
+  porPagina?: number;
+}
+
+export interface ListagemProdutos {
+  itens: Produto[];
+  total: number;
+  pagina: number;
+  porPagina: number;
+}
+
+interface ListagemDTO {
+  itens: ProdutoDTO[];
+  total: number;
+  pagina: number;
+  porPagina: number;
 }
 
 export const produtosService = {
-  async listar(filtros: FiltrosProdutos = {}): Promise<Produto[]> {
+  async listar(filtros: FiltrosProdutos = {}): Promise<ListagemProdutos> {
     const ativo =
       filtros.ativo === 'ATIVOS' ? 'true' : filtros.ativo === 'INATIVOS' ? 'false' : undefined;
-    const { itens } = await api.get<{ itens: ProdutoDTO[] }>('/admin/produtos', {
+    const dto = await api.get<ListagemDTO>('/admin/produtos', {
       busca: filtros.busca,
       ativo,
+      pagina: filtros.pagina,
+      porPagina: filtros.porPagina,
     });
-    return itens.map(fromProdutoDTO);
+    return {
+      itens: dto.itens.map(fromProdutoDTO),
+      total: dto.total,
+      pagina: dto.pagina,
+      porPagina: dto.porPagina,
+    };
   },
 };

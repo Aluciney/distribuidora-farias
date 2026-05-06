@@ -5,9 +5,7 @@
  */
 import { api } from '@/services/api/http';
 import {
-  fromClienteDTO,
   fromUsuarioDTO,
-  type ClienteDTO,
   type UsuarioDTO,
 } from '@/services/api/transformers';
 import type { Cliente, Usuario } from '@/types';
@@ -42,10 +40,35 @@ interface RespostaLoginCliente {
   token: string;
 }
 
+interface ClienteResumoDTO {
+  id: string;
+  cnpj: string;
+  razaoSocial: string;
+  nomeFantasia: string | null;
+  email: string;
+  status: 'ATIVO' | 'INATIVO' | 'BLOQUEADO';
+}
+
 interface RespostaEu {
   tipo: 'ADMIN' | 'CLIENTE';
   usuario: UsuarioDTO | null;
-  cliente: ClienteDTO | null;
+  cliente: ClienteResumoDTO | null;
+}
+
+function clienteFromResumo(r: ClienteResumoDTO): Cliente {
+  return {
+    id: r.id,
+    cnpj: r.cnpj,
+    razaoSocial: r.razaoSocial,
+    nomeFantasia: r.nomeFantasia ?? undefined,
+    email: r.email,
+    telefone: '',
+    endereco: { cep: '', logradouro: '', numero: '', bairro: '', cidade: '', uf: '' },
+    status: r.status,
+    limiteCredito: 0,
+    criadoEm: '',
+    atualizadoEm: '',
+  };
 }
 
 export const authService = {
@@ -63,23 +86,9 @@ export const authService = {
       cnpj,
       senha: payload.senha,
     });
-    // Backend retorna apenas resumo; buscamos o cliente completo via /auth/eu
+    // /auth/eu confirma o resumo da sessão (mesmo shape do login)
     const eu = await api.get<RespostaEu>('/auth/eu');
-    if (eu.cliente) return fromClienteDTO(eu.cliente);
-    // fallback: retorna shape mínimo aceitando que campos opcionais virão depois.
-    return {
-      id: res.cliente.id,
-      cnpj: res.cliente.cnpj,
-      razaoSocial: res.cliente.razaoSocial,
-      nomeFantasia: res.cliente.nomeFantasia ?? undefined,
-      email: res.cliente.email,
-      telefone: '',
-      endereco: { cep: '', logradouro: '', numero: '', bairro: '', cidade: '', uf: '' },
-      status: res.cliente.status,
-      limiteCredito: 0,
-      criadoEm: '',
-      atualizadoEm: '',
-    };
+    return clienteFromResumo(eu.cliente ?? res.cliente);
   },
 
   async logout(): Promise<void> {

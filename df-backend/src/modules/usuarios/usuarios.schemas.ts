@@ -20,6 +20,8 @@ export const listarUsuariosQuerySchema = z.object({
 		.enum(['true', 'false'])
 		.optional()
 		.transform((v) => (v === undefined ? undefined : v === 'true')),
+	pagina: z.coerce.number().int().positive().default(1),
+	porPagina: z.coerce.number().int().positive().max(100).default(10),
 })
 
 export const criarUsuarioInputSchema = z.object({

@@ -20,7 +20,10 @@
       "Read(//d/d/df-distribuidora/claude/df-backend/**)",
       "Bash(npm uninstall *)",
       "Bash(cd /d/df-distribuidora/claude/df-web && grep -rn \"formatDate\\(\" src --include=\"*.tsx\" --include=\"*.ts\" | grep -v \"formatDateTime\\\\|formatDateUTC\")",
-      "Read(//d/d/df-distribuidora/claude/df-web/**)"
+      "Read(//d/d/df-distribuidora/claude/df-web/**)",
+      "Bash(Get-ChildItem -Path \"D:\\\\df-distribuidora\\\\claude\\\\df-backend\\\\src\\\\modules\" -Directory)",
+      "Bash(echo \"backend exit: $?\")",
+      "Bash(echo \"frontend exit: $?\")"
     ]
   }
 }

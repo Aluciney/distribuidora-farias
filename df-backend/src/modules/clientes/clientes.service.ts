@@ -39,22 +39,34 @@ interface AtualizarInput {
 export class ClientesService {
 	constructor(private readonly prisma: PrismaClient) {}
 
-	async listar(filtros: { busca?: string; status?: StatusCliente }): Promise<Cliente[]> {
-		return this.prisma.cliente.findMany({
-			where: {
-				status: filtros.status,
-				...(filtros.busca
-					? {
-							OR: [
-								{ razaoSocial: { contains: filtros.busca, mode: 'insensitive' } },
-								{ nomeFantasia: { contains: filtros.busca, mode: 'insensitive' } },
-								{ cnpj: { contains: apenasDigitosCnpj(filtros.busca) } },
-							],
-						}
-					: {}),
-			},
-			orderBy: { razaoSocial: 'asc' },
-		})
+	async listar(filtros: {
+		busca?: string
+		status?: StatusCliente
+		pagina: number
+		porPagina: number
+	}): Promise<{ itens: Cliente[]; total: number }> {
+		const where = {
+			status: filtros.status,
+			...(filtros.busca
+				? {
+						OR: [
+							{ razaoSocial: { contains: filtros.busca, mode: 'insensitive' as const } },
+							{ nomeFantasia: { contains: filtros.busca, mode: 'insensitive' as const } },
+							{ cnpj: { contains: apenasDigitosCnpj(filtros.busca) } },
+						],
+					}
+				: {}),
+		}
+		const [itens, total] = await Promise.all([
+			this.prisma.cliente.findMany({
+				where,
+				orderBy: { razaoSocial: 'asc' },
+				skip: (filtros.pagina - 1) * filtros.porPagina,
+				take: filtros.porPagina,
+			}),
+			this.prisma.cliente.count({ where }),
+		])
+		return { itens, total }
 	}
 
 	async obter(id: string): Promise<Cliente> {

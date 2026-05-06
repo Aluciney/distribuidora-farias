@@ -22,16 +22,28 @@ export async function rotasUsuarios(app: FastifyInstance) {
 		{
 			schema: {
 				tags: ['Usuários'],
-				summary: 'Lista usuários internos',
+				summary: 'Lista usuários internos (paginado)',
 				security: [{ cookieAuth: [] }, { bearerAuth: [] }],
 				querystring: listarUsuariosQuerySchema,
-				response: { 200: z.object({ itens: z.array(usuarioSchema) }) },
+				response: {
+					200: z.object({
+						itens: z.array(usuarioSchema),
+						total: z.number(),
+						pagina: z.number(),
+						porPagina: z.number(),
+					}),
+				},
 			},
 			preHandler: guard,
 		},
 		async (req) => {
-			const itens = await service.listar(req.query)
-			return { itens: itens.map(serializar) }
+			const { itens, total } = await service.listar(req.query)
+			return {
+				itens: itens.map(serializar),
+				total,
+				pagina: req.query.pagina,
+				porPagina: req.query.porPagina,
+			}
 		},
 	)
 
