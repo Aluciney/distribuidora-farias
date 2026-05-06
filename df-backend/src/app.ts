@@ -15,6 +15,7 @@ import { rotasPedidos } from './modules/pedidos/pedidos.routes'
 import { rotasProdutos } from './modules/produtos/produtos.routes'
 import { rotasRegras } from './modules/regras/regras.routes'
 import { rotasUsuarios } from './modules/usuarios/usuarios.routes'
+import { rotasWhatsapp } from './modules/whatsapp/whatsapp.routes'
 import { authPlugin } from './plugins/auth.plugin'
 import { errorHandlerPlugin } from './plugins/error-handler.plugin'
 import { prismaPlugin } from './plugins/prisma.plugin'
@@ -64,6 +65,7 @@ export async function buildApp() {
 	await app.register(rotasFluxoCaixa, { prefix: '/admin/fluxo-caixa' })
 	await app.register(rotasRegras, { prefix: '/admin/regras' })
 	await app.register(rotasNotificacoesAdmin, { prefix: '/admin/notificacoes' })
+	await app.register(rotasWhatsapp, { prefix: '/admin/whatsapp' })
 
 	await app.register(rotasCobrancasCliente, { prefix: '/cliente/faturas' })
 	await app.register(rotasNotificacoesCliente, { prefix: '/cliente/notificacoes' })

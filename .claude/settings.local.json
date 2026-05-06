@@ -10,7 +10,17 @@
       "Bash(Get-ChildItem -Path \"D:\\\\df-distribuidora\\\\claude\\\\df-web\\\\src\" -Directory)",
       "Bash(Select-Object Name)",
       "PowerShell(Get-ChildItem -Path \"D:\\\\df-distribuidora\\\\claude\\\\df-web\\\\src\\\\app\" -Recurse | Where-Object { $_.Name -match \"router|route\" } | Select-Object -ExpandProperty FullName)",
-      "PowerShell(head -10)"
+      "PowerShell(head -10)",
+      "Bash(dir /B d:\\\\df-distribuidora\\\\claude)",
+      "Bash(npm view *)",
+      "Bash(npx --no-install tsc --noEmit)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(npx --no-install jest --listTests)",
+      "Bash(cd /d/df-distribuidora/claude/df-backend && grep -i \"bull-board\\\\|bullmq\" package.json)",
+      "Read(//d/d/df-distribuidora/claude/df-backend/**)",
+      "Bash(npm uninstall *)",
+      "Bash(cd /d/df-distribuidora/claude/df-web && grep -rn \"formatDate\\(\" src --include=\"*.tsx\" --include=\"*.ts\" | grep -v \"formatDateTime\\\\|formatDateUTC\")",
+      "Read(//d/d/df-distribuidora/claude/df-web/**)"
     ]
   }
 }

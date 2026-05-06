@@ -5,10 +5,15 @@ const BRL = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
 });
 
+// Datas de domínio (vencimento, emissão) são salvas pelo backend como
+// `YYYY-MM-DDT00:00:00Z` — meia-noite UTC do dia escolhido. Formatar em
+// horário local exibe o dia anterior em fusos negativos (BRT = UTC-3).
+// Por isso forçamos UTC aqui.
 const DATE_PT = new Intl.DateTimeFormat('pt-BR', {
   day: '2-digit',
   month: '2-digit',
   year: 'numeric',
+  timeZone: 'UTC',
 });
 
 const DATETIME_PT = new Intl.DateTimeFormat('pt-BR', {

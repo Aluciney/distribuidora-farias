@@ -25,5 +25,16 @@ services:
     ports:
       - '5433:5432'
 
+  redis:
+    image: redis:7-alpine
+    container_name: df-redis
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '6379:6379'
+    volumes:
+      - df-redis:/data
+
 volumes:
   df-postgres-dev:
+  df-redis:

@@ -34,6 +34,36 @@ const envSchema = z
 			.enum(['true', 'false'])
 			.default('true')
 			.transform((v) => v === 'true'),
+
+		// Redis / BullMQ
+		REDIS_HOST: z.string().default('localhost'),
+		REDIS_PORT: z.coerce.number().default(6379),
+		REDIS_PASSWORD: z.string().optional(),
+		REDIS_DB: z.coerce.number().default(0),
+
+		WORKERS_HABILITADOS: z
+			.enum(['true', 'false'])
+			.default('true')
+			.transform((v) => v === 'true'),
+
+		// WhatsApp (Baileys)
+		WHATSAPP_HABILITADO: z
+			.enum(['true', 'false'])
+			.default('true')
+			.transform((v) => v === 'true'),
+		WHATSAPP_AUTH_DIR: z.string().default('./.baileys-auth'),
+		WHATSAPP_DEVICE_NAME: z.string().default('DF Distribuidora'),
+
+		// SMTP / Email
+		SMTP_HOST: z.string().optional(),
+		SMTP_PORT: z.coerce.number().optional(),
+		SMTP_SECURE: z
+			.enum(['true', 'false'])
+			.default('false')
+			.transform((v) => v === 'true'),
+		SMTP_USER: z.string().optional(),
+		SMTP_PASS: z.string().optional(),
+		SMTP_FROM: z.string().optional(),
 	})
 	.transform((env) => {
 		if (!env.DATABASE_URL && env.DB_HOST && env.DB_USER && env.DB_PASS && env.DB_NAME && env.DB_PORT) {

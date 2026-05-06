@@ -12,6 +12,7 @@ import { ConfiguracoesPage } from '@/features/configuracoes/ConfiguracoesPage';
 import { ReguaPage } from '@/features/regua-cobranca/ReguaPage';
 import { UsuariosPage } from '@/features/usuarios/UsuariosPage';
 import { ProdutosPage } from '@/features/produtos/ProdutosPage';
+import { WhatsappPage } from '@/features/whatsapp/WhatsappPage';
 import { DashboardClientePage } from '@/features/cliente-portal/dashboard/DashboardClientePage';
 import { FaturasClientePage } from '@/features/cliente-portal/faturas/FaturasClientePage';
 import { NotificacoesPage } from '@/features/cliente-portal/notificacoes/NotificacoesPage';
@@ -37,6 +38,7 @@ export function AppRouter() {
           <Route path="cobrancas" element={<CobrancasPage />} />
           <Route path="inadimplencia" element={<InadimplenciaPage />} />
           <Route path="regua-cobranca" element={<ReguaPage />} />
+          <Route path="whatsapp" element={<WhatsappPage />} />
           <Route path="usuarios" element={<UsuariosPage />} />
           <Route path="produtos" element={<ProdutosPage />} />
           <Route path="configuracoes" element={<ConfiguracoesPage />} />
