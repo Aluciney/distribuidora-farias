@@ -3,11 +3,23 @@ import { z } from 'zod'
 export const statusFaturaSchema = z.enum(['PENDENTE', 'PAGO', 'VENCIDO', 'CANCELADO', 'ESTORNADO'])
 export const metodoPagamentoSchema = z.enum(['BOLETO', 'PIX', 'CARTAO_CREDITO', 'DINHEIRO'])
 
+export const clienteResumoSchema = z
+	.object({
+		id: z.string(),
+		cnpj: z.string(),
+		razaoSocial: z.string(),
+		nomeFantasia: z.string().nullable(),
+		email: z.string(),
+		telefone: z.string(),
+	})
+	.nullable()
+
 export const faturaSchema = z.object({
 	id: z.string(),
 	numero: z.string(),
 	pedidoId: z.string(),
 	clienteId: z.string(),
+	cliente: clienteResumoSchema,
 	valor: z.number(),
 	valorPago: z.number().nullable(),
 	status: statusFaturaSchema,

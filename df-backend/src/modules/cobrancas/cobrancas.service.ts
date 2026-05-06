@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import type { Fatura, MetodoPagamento, PrismaClient, StatusFatura } from '@prisma/client'
+import type { Cliente, Fatura, MetodoPagamento, PrismaClient, StatusFatura } from '@prisma/client'
 import { NaoEncontrado, Proibido, RegraNegocio } from '../../shared/erros'
 import { detectarBandeira, ultimosDigitos, validadeFutura, validarLuhn } from '../../shared/utils/cartao'
 import { type IBoletoGerador, BoletoMockGerador } from './boleto.gerador'
@@ -38,7 +38,7 @@ export class CobrancasService {
 		clienteId?: string
 		pagina: number
 		porPagina: number
-	}): Promise<{ itens: Fatura[]; total: number }> {
+	}): Promise<{ itens: (Fatura & { cliente: Cliente })[]; total: number }> {
 		const where = {
 			status: filtros.status,
 			clienteId: filtros.clienteId,
@@ -55,6 +55,7 @@ export class CobrancasService {
 		const [itens, total] = await Promise.all([
 			this.prisma.fatura.findMany({
 				where,
+				include: { cliente: true },
 				orderBy: { dataVencimento: 'desc' },
 				skip: (filtros.pagina - 1) * filtros.porPagina,
 				take: filtros.porPagina,
@@ -64,20 +65,21 @@ export class CobrancasService {
 		return { itens, total }
 	}
 
-	async listarPorCliente(clienteId: string, status?: StatusFatura): Promise<Fatura[]> {
+	async listarPorCliente(clienteId: string, status?: StatusFatura): Promise<(Fatura & { cliente: Cliente })[]> {
 		return this.prisma.fatura.findMany({
 			where: { clienteId, status },
+			include: { cliente: true },
 			orderBy: { dataVencimento: 'desc' },
 		})
 	}
 
-	async obter(id: string): Promise<Fatura> {
-		const f = await this.prisma.fatura.findUnique({ where: { id } })
+	async obter(id: string): Promise<Fatura & { cliente: Cliente }> {
+		const f = await this.prisma.fatura.findUnique({ where: { id }, include: { cliente: true } })
 		if (!f) throw new NaoEncontrado('Fatura', id)
 		return f
 	}
 
-	async obterParaCliente(id: string, clienteId: string): Promise<Fatura> {
+	async obterParaCliente(id: string, clienteId: string): Promise<Fatura & { cliente: Cliente }> {
 		const f = await this.obter(id)
 		if (f.clienteId !== clienteId) throw new Proibido()
 		return f

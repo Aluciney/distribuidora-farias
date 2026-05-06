@@ -176,7 +176,11 @@ export interface Fatura {
   numero: string;
   pedidoId: UUID;
   clienteId: UUID;
-  cliente?: Pick<Cliente, 'id' | 'cnpj' | 'razaoSocial'>;
+  cliente?: Pick<Cliente, 'id' | 'cnpj' | 'razaoSocial'> & {
+    nomeFantasia?: string;
+    email?: string;
+    telefone?: string;
+  };
   valor: ValorEmCentavos;
   /** Valor pago (parcial ou total). */
   valorPago?: ValorEmCentavos;

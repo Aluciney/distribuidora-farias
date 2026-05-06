@@ -1,9 +1,13 @@
-import { Banknote, QrCode } from 'lucide-react';
+import { useRef } from 'react';
+import { useReactToPrint } from 'react-to-print';
+import { Banknote, Download, QrCode } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { BoletoBarcode } from '@/components/ui/BoletoBarcode';
 import { CopyButton } from '@/components/ui/CopyButton';
-import { QrCodeMock } from '@/components/ui/QrCodeMock';
+import { PixQrCode } from '@/components/ui/PixQrCode';
+import { FaturaImprimivel } from '@/features/cobrancas/components/FaturaImprimivel';
 import { MetodoPagamento, StatusFatura, type Fatura } from '@/types';
 import {
   formatCNPJ,
@@ -50,6 +54,12 @@ export function DetalhesFaturaModal({
   onBaixarManual,
   onCancelarFatura,
 }: DetalhesFaturaModalProps) {
+  const printRef = useRef<HTMLDivElement>(null);
+  const imprimir = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: fatura ? `Fatura-${fatura.numero}` : 'Fatura',
+  });
+
   if (!fatura) {
     return (
       <Modal aberto={aberto} onFechar={onFechar} titulo="Fatura">
@@ -74,6 +84,10 @@ export function DetalhesFaturaModal({
         <>
           <Button variant="outline" onClick={onFechar}>
             Fechar
+          </Button>
+          <Button variant="outline" onClick={() => imprimir()}>
+            <Download className="h-4 w-4" />
+            Baixar PDF
           </Button>
           {podeCancelar && (
             <Button variant="danger" onClick={onCancelarFatura}>
@@ -170,6 +184,7 @@ export function DetalhesFaturaModal({
             <Banknote className="h-4 w-4 text-amber-300" />
             Boleto Febraban
           </h3>
+          <BoletoBarcode codigo={fatura.boleto.codigoBarras} />
           <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-4">
             <p className="text-xs uppercase tracking-wider text-slate-500">
               Linha digitável
@@ -196,7 +211,7 @@ export function DetalhesFaturaModal({
             PIX estático
           </h3>
           <div className="flex flex-col items-start gap-4 sm:flex-row">
-            <QrCodeMock valor={fatura.pix.qrCode} tamanho={180} />
+            <PixQrCode valor={fatura.pix.copiaECola} tamanho={180} />
             <div className="min-w-0 flex-1 space-y-2">
               <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
                 <p className="text-xs uppercase tracking-wider text-slate-500">
@@ -236,6 +251,11 @@ export function DetalhesFaturaModal({
             <p className="mt-1">{fatura.observacoes}</p>
           </div>
         )}
+      </div>
+
+      {/* Versão imprimível: off-screen no fluxo normal, ativada pelo react-to-print. */}
+      <div style={{ position: 'absolute', left: '-10000px', top: 0 }} aria-hidden>
+        <FaturaImprimivel ref={printRef} fatura={fatura} />
       </div>
     </Modal>
   );

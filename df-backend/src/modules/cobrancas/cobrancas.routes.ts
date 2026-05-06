@@ -1,4 +1,4 @@
-import type { Fatura } from '@prisma/client'
+import type { Cliente, Fatura } from '@prisma/client'
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
@@ -14,12 +14,22 @@ import {
 } from './cobrancas.schemas'
 import { CobrancasService } from './cobrancas.service'
 
-export function serializarFatura(f: Fatura) {
+export function serializarFatura(f: Fatura & { cliente?: Cliente | null }) {
 	return {
 		id: f.id,
 		numero: f.numero,
 		pedidoId: f.pedidoId,
 		clienteId: f.clienteId,
+		cliente: f.cliente
+			? {
+					id: f.cliente.id,
+					cnpj: f.cliente.cnpj,
+					razaoSocial: f.cliente.razaoSocial,
+					nomeFantasia: f.cliente.nomeFantasia,
+					email: f.cliente.email,
+					telefone: f.cliente.telefone,
+				}
+			: null,
 		valor: f.valor,
 		valorPago: f.valorPago,
 		status: f.status,

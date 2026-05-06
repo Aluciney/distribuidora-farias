@@ -186,7 +186,14 @@ export interface FaturaDTO {
   numero: string;
   pedidoId: string;
   clienteId: string;
-  cliente?: { id: string; cnpj: string; razaoSocial: string } | null;
+  cliente?: {
+    id: string;
+    cnpj: string;
+    razaoSocial: string;
+    nomeFantasia?: string | null;
+    email?: string;
+    telefone?: string;
+  } | null;
   valor: number;
   valorPago: number | null;
   status: StatusFatura;
@@ -247,7 +254,14 @@ export function fromFaturaDTO(dto: FaturaDTO): Fatura {
     pedidoId: dto.pedidoId,
     clienteId: dto.clienteId,
     cliente: dto.cliente
-      ? { id: dto.cliente.id, cnpj: dto.cliente.cnpj, razaoSocial: dto.cliente.razaoSocial }
+      ? {
+          id: dto.cliente.id,
+          cnpj: dto.cliente.cnpj,
+          razaoSocial: dto.cliente.razaoSocial,
+          nomeFantasia: dto.cliente.nomeFantasia ?? undefined,
+          email: dto.cliente.email,
+          telefone: dto.cliente.telefone,
+        }
       : undefined,
     valor: dto.valor,
     valorPago: undef(dto.valorPago),

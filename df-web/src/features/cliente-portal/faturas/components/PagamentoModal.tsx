@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react';
-import { Banknote, CreditCard, QrCode } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { useReactToPrint } from 'react-to-print';
+import { Banknote, CreditCard, Download, QrCode } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { BoletoBarcode } from '@/components/ui/BoletoBarcode';
 import { CopyButton } from '@/components/ui/CopyButton';
-import { QrCodeMock } from '@/components/ui/QrCodeMock';
+import { PixQrCode } from '@/components/ui/PixQrCode';
 import { CartaoForm } from '@/features/cliente-portal/faturas/components/CartaoForm';
+import { FaturaImprimivel } from '@/features/cobrancas/components/FaturaImprimivel';
 import { MetodoPagamento, StatusFatura, type Fatura } from '@/types';
 import { formatCurrency, formatDate, formatDateTime } from '@/utils/format';
 import { cn } from '@/lib/cn';
@@ -47,6 +50,11 @@ export function PagamentoModal({
   fatura,
 }: PagamentoModalProps) {
   const [aba, setAba] = useState<Aba>('BOLETO');
+  const printRef = useRef<HTMLDivElement>(null);
+  const imprimir = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: fatura ? `Fatura-${fatura.numero}` : 'Fatura',
+  });
 
   useEffect(() => {
     if (aberto) setAba('BOLETO');
@@ -76,9 +84,15 @@ export function PagamentoModal({
       }
       tamanho="lg"
       rodape={
-        <Button variant="outline" onClick={onFechar}>
-          Fechar
-        </Button>
+        <>
+          <Button variant="outline" onClick={onFechar}>
+            Fechar
+          </Button>
+          <Button variant="outline" onClick={() => imprimir()}>
+            <Download className="h-4 w-4" />
+            Baixar PDF
+          </Button>
+        </>
       }
     >
       <div className="space-y-5">
@@ -168,6 +182,7 @@ export function PagamentoModal({
 
             {aba === 'BOLETO' && (
               <section className="space-y-3">
+                <BoletoBarcode codigo={fatura.boleto.codigoBarras} />
                 <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-4">
                   <p className="text-xs uppercase tracking-wider text-slate-500">
                     Linha digitável
@@ -186,15 +201,15 @@ export function PagamentoModal({
                   </div>
                 </div>
                 <p className="text-xs text-slate-500">
-                  Cole a linha digitável no app do seu banco. A confirmação do
-                  pagamento pode levar até 2 dias úteis.
+                  Cole a linha digitável ou escaneie o código de barras no app
+                  do seu banco. A confirmação pode levar até 2 dias úteis.
                 </p>
               </section>
             )}
 
             {aba === 'PIX' && (
               <section className="flex flex-col items-start gap-4 sm:flex-row">
-                <QrCodeMock valor={fatura.pix.qrCode} tamanho={180} />
+                <PixQrCode valor={fatura.pix.copiaECola} tamanho={180} />
                 <div className="min-w-0 flex-1 space-y-2">
                   <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
                     <p className="text-xs uppercase tracking-wider text-slate-500">
@@ -221,6 +236,11 @@ export function PagamentoModal({
             )}
           </>
         )}
+      </div>
+
+      {/* Versão imprimível: off-screen no fluxo normal, ativada pelo react-to-print. */}
+      <div style={{ position: 'absolute', left: '-10000px', top: 0 }} aria-hidden>
+        <FaturaImprimivel ref={printRef} fatura={fatura} />
       </div>
     </Modal>
   );
