@@ -164,6 +164,32 @@ export async function rotasCobrancasAdmin(app: FastifyInstance) {
 	)
 
 	a.post(
+		'/:id/enviar-whatsapp',
+		{
+			schema: {
+				tags: ['Cobranças'],
+				summary: 'Envia o boleto em PDF para o WhatsApp do cliente',
+				security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+				params: z.object({ id: z.string().uuid() }),
+				response: {
+					200: z.object({
+						ok: z.literal(true),
+						enviadoEm: z.string().datetime(),
+						destinatario: z.string(),
+					}),
+					404: erroSchema,
+					422: erroSchema,
+				},
+			},
+			preHandler: guard,
+		},
+		async (req) => {
+			const r = await service.enviarBoletoWhatsapp(req.params.id)
+			return { ok: true as const, ...r }
+		},
+	)
+
+	a.post(
 		'/:id/cancelar',
 		{
 			schema: {

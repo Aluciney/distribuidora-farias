@@ -51,12 +51,21 @@ export interface EncargosCobranca {
   mensagemPadrao?: string;
 }
 
+export interface ConfiguracoesWhatsapp {
+  /** Texto enviado junto com o boleto. Suporta placeholders. */
+  mensagemBoleto?: string;
+}
+
 export interface ConfiguracoesCobranca {
   beneficiario: BeneficiarioCobranca;
   banco: DadosBancarios;
   pix: ConfiguracoesPix;
   encargos: EncargosCobranca;
+  whatsapp: ConfiguracoesWhatsapp;
 }
+
+export const MENSAGEM_WHATSAPP_BOLETO_PADRAO =
+  'Olá, {cliente}! Segue o boleto da fatura {numero} no valor de {valor}, com vencimento em {vencimento}.\n\nLinha digitável: {linhaDigitavel}\nPIX: {pix}';
 
 // ---------------------------------------------------------------------------
 // Catálogo de bancos suportados (subset Febraban)
@@ -123,6 +132,9 @@ export const CONFIG_PADRAO: ConfiguracoesCobranca = {
     descontoAntecipadoDias: 0,
     descontoPercentual: 0,
     mensagemPadrao: '',
+  },
+  whatsapp: {
+    mensagemBoleto: MENSAGEM_WHATSAPP_BOLETO_PADRAO,
   },
 };
 

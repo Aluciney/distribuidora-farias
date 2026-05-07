@@ -104,7 +104,50 @@ class WhatsAppService {
 			throw new Error('WhatsApp não está conectado.')
 		}
 		const jid = formatarJid(destinatario)
+		await this.aquecerSessao(jid)
 		await this.socket.sendMessage(jid, { text: mensagem })
+	}
+
+	async enviarDocumento(
+		destinatario: string,
+		documento: { buffer: Buffer; nomeArquivo: string; mimetype: string },
+		legenda?: string,
+	): Promise<void> {
+		if (!this.socket || !this.estaConectado()) {
+			throw new Error('WhatsApp não está conectado.')
+		}
+		const jid = formatarJid(destinatario)
+		await this.aquecerSessao(jid)
+
+		// Envia o texto antes do PDF: garante que o destinatário tenha sessão
+		// de cripto pronta antes do anexo (evita "Aguardando mensagem").
+		if (legenda) {
+			await this.socket.sendMessage(jid, { text: legenda })
+		}
+
+		await this.socket.sendMessage(jid, {
+			document: documento.buffer,
+			mimetype: documento.mimetype,
+			fileName: documento.nomeArquivo,
+		})
+	}
+
+	/**
+	 * Pequeno handshake de presença antes de enviar mídia. Resolve o caso em
+	 * que o cliente do destinatário recebe "Aguardando mensagem" porque a
+	 * sessão de criptografia ainda não foi estabelecida.
+	 */
+	private async aquecerSessao(jid: string): Promise<void> {
+		if (!this.socket) return
+		try {
+			await this.socket.presenceSubscribe(jid)
+			await this.socket.sendPresenceUpdate('available')
+			await this.socket.sendPresenceUpdate('composing', jid)
+			await delay(600)
+			await this.socket.sendPresenceUpdate('paused', jid)
+		} catch (err) {
+			this.logger.warn('Falha ao aquecer sessão antes do envio', err)
+		}
 	}
 
 	private async conectar(): Promise<void> {
@@ -122,7 +165,10 @@ class WhatsAppService {
 			auth: state,
 			printQRInTerminal: false,
 			browser: [env.WHATSAPP_DEVICE_NAME, 'Chrome', '120.0.0'],
-			markOnlineOnConnect: false,
+			// Precisa estar online para o destinatário conseguir buscar mídia
+			// (sem isso o WhatsApp do cliente fica em "Aguardando mensagem").
+			markOnlineOnConnect: true,
+			syncFullHistory: false,
 		})
 
 		this.socket.ev.on('creds.update', saveCreds)
@@ -192,6 +238,10 @@ class WhatsAppService {
 			}
 		})
 	}
+}
+
+function delay(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 function formatarJid(destinatario: string): string {

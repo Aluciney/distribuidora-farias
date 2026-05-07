@@ -15,6 +15,7 @@ function addUTCDays(d: Date, days: number): Date {
 }
 import { type DadosJobNotificacao, getFilaNotificacoes } from '../../queues/filas'
 import { formatarBrl } from '../../shared/utils/moeda'
+import { PushService } from '../push/push.service'
 import type { ICanalNotificacao } from './canais/canal.interface'
 import { EmailCanalLog, EmailCanalSmtp } from './canais/email.canal'
 import { SmsCanalLog } from './canais/sms.canal'
@@ -34,6 +35,7 @@ const noopLogger: Logger = { info: () => undefined, warn: () => undefined }
 
 export class NotificacoesService {
 	private canais: Map<CanalNotificacao, ICanalNotificacao>
+	private push: PushService
 
 	constructor(
 		private readonly prisma: PrismaClient,
@@ -45,6 +47,7 @@ export class NotificacoesService {
 			['WHATSAPP', canais?.WHATSAPP ?? defaultCanalWhatsApp()],
 			['SMS', canais?.SMS ?? new SmsCanalLog()],
 		])
+		this.push = new PushService(prisma)
 	}
 
 	/**
@@ -103,6 +106,21 @@ export class NotificacoesService {
 			}
 
 			for (const fatura of faturas) {
+				// Push imediato — uma vez por (regra × fatura), independente de
+				// quantas ações (email/whatsapp/sms) a regra dispara nos canais.
+				void this.push
+					.enviarParaCliente({
+						clienteId: fatura.clienteId,
+						titulo: regra.nome,
+						corpo: this.corpoPushRegua(regra, fatura, fatura.cliente),
+						data: {
+							tipo: 'regua_cobranca',
+							faturaId: fatura.id,
+							regraId: regra.id,
+						},
+					})
+					.catch(() => undefined)
+
 				for (const acao of regra.acoes) {
 					const mensagem = this.renderizar(acao.mensagem, fatura, fatura.cliente)
 					const assunto = acao.assunto ? this.renderizar(acao.assunto, fatura, fatura.cliente) : null
@@ -126,6 +144,24 @@ export class NotificacoesService {
 		}
 
 		return { enfileirados }
+	}
+
+	/**
+	 * Frase curta para o corpo do push da régua. Usa a primeira ação da regra
+	 * como template se houver, caindo em uma mensagem genérica caso contrário.
+	 */
+	private corpoPushRegua(
+		regra: { nome: string; acoes: { mensagem: string }[] },
+		fatura: Fatura,
+		cliente: Cliente,
+	): string {
+		const template = regra.acoes[0]?.mensagem
+		if (template) {
+			const renderizado = this.renderizar(template, fatura, cliente)
+			// Limita o corpo do push a ~200 caracteres para caber bem no banner.
+			return renderizado.length > 200 ? `${renderizado.slice(0, 197)}...` : renderizado
+		}
+		return `Fatura ${fatura.numero} (${formatarBrl(fatura.valor)}) — vence em ${format(fatura.dataVencimento, 'dd/MM/yyyy')}.`
 	}
 
 	/**

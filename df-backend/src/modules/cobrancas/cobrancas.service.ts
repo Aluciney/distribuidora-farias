@@ -2,8 +2,15 @@ import { randomUUID } from 'node:crypto'
 import type { Cliente, Fatura, MetodoPagamento, PrismaClient, StatusFatura } from '@prisma/client'
 import { NaoEncontrado, Proibido, RegraNegocio } from '../../shared/erros'
 import { detectarBandeira, ultimosDigitos, validadeFutura, validarLuhn } from '../../shared/utils/cartao'
+import { whatsappService } from '../whatsapp/whatsapp.service'
+import { PushService } from '../push/push.service'
 import { type IBoletoGerador, BoletoMockGerador } from './boleto.gerador'
+import { gerarBoletoPdf } from './boleto.pdf'
 import { type IPixGerador, PixMockGerador } from './pix.gerador'
+
+/** Texto enviado quando a empresa não personaliza a mensagem nas configurações. */
+export const MENSAGEM_BOLETO_PADRAO =
+	'Olá, {cliente}! Segue o boleto da fatura {numero} no valor de {valor}, com vencimento em {vencimento}.\n\nLinha digitável: {linhaDigitavel}\nPIX: {pix}'
 
 interface CriarInput {
 	pedidoId: string
@@ -29,8 +36,11 @@ interface PagarCartaoInput {
 export class CobrancasService {
 	private boleto: IBoletoGerador = new BoletoMockGerador()
 	private pix: IPixGerador = new PixMockGerador()
+	private push: PushService
 
-	constructor(private readonly prisma: PrismaClient) {}
+	constructor(private readonly prisma: PrismaClient) {
+		this.push = new PushService(prisma)
+	}
 
 	async listar(filtros: {
 		busca?: string
@@ -140,6 +150,16 @@ export class CobrancasService {
 			})
 		})
 
+		// Push para o cliente — fire-and-forget; uma falha aqui não derruba a cobrança.
+		void this.push
+			.enviarParaCliente({
+				clienteId: fatura.clienteId,
+				titulo: 'Nova cobrança',
+				corpo: `${fatura.numero} no valor de ${formatarBrlCentavos(fatura.valor)} — vence em ${formatarDataBR(fatura.dataVencimento)}.`,
+				data: { tipo: 'fatura_criada', faturaId: fatura.id },
+			})
+			.catch(() => undefined)
+
 		return fatura
 	}
 
@@ -223,6 +243,33 @@ export class CobrancasService {
 		return atualizada
 	}
 
+	async enviarBoletoWhatsapp(id: string): Promise<{ enviadoEm: string; destinatario: string }> {
+		const fatura = await this.obter(id)
+		const cliente = fatura.cliente
+		if (!cliente.telefone || cliente.telefone.replace(/\D/g, '').length < 10) {
+			throw new RegraNegocio('TELEFONE_INVALIDO', 'Cliente sem telefone válido cadastrado.')
+		}
+		const config = await this.prisma.configuracoesCobranca.findUnique({ where: { id: 'unica' } })
+		if (!config) {
+			throw new RegraNegocio('CONFIGURACAO_INCOMPLETA', 'Configurações de cobrança não encontradas.')
+		}
+
+		const pdf = await gerarBoletoPdf({ fatura, cliente, config })
+		const mensagem = montarMensagem(config.whatsappMensagemBoleto ?? MENSAGEM_BOLETO_PADRAO, fatura, cliente)
+
+		await whatsappService.enviarDocumento(
+			cliente.telefone,
+			{
+				buffer: pdf,
+				nomeArquivo: `boleto-${fatura.numero}.pdf`,
+				mimetype: 'application/pdf',
+			},
+			mensagem,
+		)
+
+		return { enviadoEm: new Date().toISOString(), destinatario: cliente.telefone }
+	}
+
 	private async gerarNumeroFatura(): Promise<string> {
 		const ano = new Date().getFullYear()
 		const prefixo = `FAT-${ano}-`
@@ -233,4 +280,32 @@ export class CobrancasService {
 		const seq = ultima ? Number(ultima.numero.split('-').pop()) + 1 : 1
 		return `${prefixo}${String(seq).padStart(4, '0')}`
 	}
+}
+
+function formatarBrlCentavos(centavos: number): string {
+	return `R$ ${(centavos / 100).toFixed(2).replace('.', ',')}`
+}
+
+function formatarDataBR(d: Date): string {
+	const dia = String(d.getUTCDate()).padStart(2, '0')
+	const mes = String(d.getUTCMonth() + 1).padStart(2, '0')
+	return `${dia}/${mes}/${d.getUTCFullYear()}`
+}
+
+function montarMensagem(template: string, fatura: Fatura, cliente: Cliente): string {
+	const valor = `R$ ${(fatura.valor / 100).toFixed(2).replace('.', ',')}`
+	const venc = fatura.dataVencimento
+	const vencimento = `${String(venc.getUTCDate()).padStart(2, '0')}/${String(venc.getUTCMonth() + 1).padStart(2, '0')}/${venc.getUTCFullYear()}`
+	const placeholders: Record<string, string> = {
+		'{cliente}': cliente.razaoSocial,
+		'{numero}': fatura.numero,
+		'{valor}': valor,
+		'{vencimento}': vencimento,
+		'{linhaDigitavel}': fatura.boletoLinhaDigitavel,
+		'{pix}': fatura.pixCopiaECola,
+	}
+	return Object.entries(placeholders).reduce(
+		(acc, [chave, valor]) => acc.split(chave).join(valor),
+		template,
+	)
 }

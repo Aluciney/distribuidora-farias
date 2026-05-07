@@ -112,11 +112,20 @@ const encargosSchema = z.object({
   mensagemPadrao: z.string().max(255, 'Máximo 255 caracteres.').optional().or(z.literal('')),
 });
 
+const whatsappSchema = z.object({
+  mensagemBoleto: z
+    .string()
+    .max(2000, 'Máximo 2000 caracteres.')
+    .optional()
+    .or(z.literal('')),
+});
+
 export const configuracoesSchema = z.object({
   beneficiario: beneficiarioSchema,
   banco: bancoSchema,
   pix: pixSchema,
   encargos: encargosSchema,
+  whatsapp: whatsappSchema,
 });
 
 export type ConfiguracoesFormValues = z.infer<typeof configuracoesSchema>;

@@ -23,7 +23,11 @@
       "Read(//d/d/df-distribuidora/claude/df-web/**)",
       "Bash(Get-ChildItem -Path \"D:\\\\df-distribuidora\\\\claude\\\\df-backend\\\\src\\\\modules\" -Directory)",
       "Bash(echo \"backend exit: $?\")",
-      "Bash(echo \"frontend exit: $?\")"
+      "Bash(echo \"frontend exit: $?\")",
+      "Bash(echo \"Exit: $?\")",
+      "Bash(npx expo *)",
+      "Bash(echo \"Exit back: $?\")",
+      "Bash(echo \"Exit mobile: $?\")"
     ]
   }
 }

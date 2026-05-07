@@ -5,6 +5,8 @@ import { z } from 'zod'
 import { env } from './env'
 import { rotasAuth } from './modules/auth/auth.routes'
 import { rotasClientes } from './modules/clientes/clientes.routes'
+import { rotasClientePerfil } from './modules/cliente-perfil/cliente-perfil.routes'
+import { rotasPushCliente } from './modules/push/push.routes'
 import { rotasCobrancasAdmin, rotasCobrancasCliente } from './modules/cobrancas/cobrancas.routes'
 import { rotasConfiguracoes } from './modules/configuracoes/configuracoes.routes'
 import { rotasDashboardCliente } from './modules/dashboard-cliente/dashboard-cliente.routes'
@@ -70,6 +72,8 @@ export async function buildApp() {
 	await app.register(rotasCobrancasCliente, { prefix: '/cliente/faturas' })
 	await app.register(rotasNotificacoesCliente, { prefix: '/cliente/notificacoes' })
 	await app.register(rotasDashboardCliente, { prefix: '/cliente/dashboard' })
+	await app.register(rotasClientePerfil, { prefix: '/cliente/perfil' })
+	await app.register(rotasPushCliente, { prefix: '/cliente/push' })
 
 	return app
 }

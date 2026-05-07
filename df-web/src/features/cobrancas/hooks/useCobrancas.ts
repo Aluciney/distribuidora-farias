@@ -81,6 +81,21 @@ export function usePagarComCartao() {
   });
 }
 
+export function useEnviarBoletoWhatsapp() {
+  return useMutation({
+    mutationFn: (id: UUID) => cobrancasService.enviarBoletoWhatsapp(id),
+    onSuccess: () => {
+      toast.sucesso(
+        'Boleto enviado',
+        'O cliente receberá o PDF e a mensagem no WhatsApp.',
+      );
+    },
+    onError: (err: Error) => {
+      toast.erro('Falha ao enviar pelo WhatsApp', err.message);
+    },
+  });
+}
+
 export function useCancelarFatura() {
   const qc = useQueryClient();
   return useMutation({

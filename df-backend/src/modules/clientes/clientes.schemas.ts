@@ -65,6 +65,7 @@ export const atualizarClienteInputSchema = z.object({
 	limiteCredito: z.number().int().nonnegative().optional(),
 	observacoes: z.string().nullish(),
 	endereco: enderecoSchema.optional(),
+	status: statusClienteSchema.optional(),
 })
 
 export const alterarStatusClienteInputSchema = z.object({

@@ -34,6 +34,7 @@ interface AtualizarInput {
 	limiteCredito?: number
 	observacoes?: string | null
 	endereco?: Endereco
+	status?: StatusCliente
 }
 
 export class ClientesService {
@@ -118,6 +119,7 @@ export class ClientesService {
 				telefone: input.telefone,
 				limiteCredito: input.limiteCredito,
 				observacoes: input.observacoes,
+				status: input.status,
 				...(input.endereco
 					? {
 							enderecoCep: input.endereco.cep,

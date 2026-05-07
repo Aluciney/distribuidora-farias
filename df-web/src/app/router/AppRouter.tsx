@@ -16,6 +16,7 @@ import { WhatsappPage } from '@/features/whatsapp/WhatsappPage';
 import { DashboardClientePage } from '@/features/cliente-portal/dashboard/DashboardClientePage';
 import { FaturasClientePage } from '@/features/cliente-portal/faturas/FaturasClientePage';
 import { NotificacoesPage } from '@/features/cliente-portal/notificacoes/NotificacoesPage';
+import { PerfilClientePage } from '@/features/cliente-portal/perfil/PerfilClientePage';
 
 export function AppRouter() {
   return (
@@ -57,6 +58,7 @@ export function AppRouter() {
           <Route path="faturas" element={<FaturasClientePage />} />
           <Route path="faturas/:id" element={<FaturasClientePage />} />
           <Route path="notificacoes" element={<NotificacoesPage />} />
+          <Route path="perfil" element={<PerfilClientePage />} />
         </Route>
 
         <Route path="*" element={<NotFoundPage />} />

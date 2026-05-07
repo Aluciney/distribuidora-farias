@@ -63,10 +63,27 @@ model Cliente {
   pedidos      Pedido[]
   faturas      Fatura[]
   notificacoes Notificacao[]
+  dispositivos DispositivoPush[]
 
   @@index([cnpj])
   @@index([status])
   @@map("clientes")
+}
+
+/// Dispositivo móvel autorizado a receber push notifications via Expo.
+/// O token (formato `ExponentPushToken[xxxx]`) é único por instalação do app.
+model DispositivoPush {
+  id         String   @id @default(uuid())
+  clienteId  String   @map("cliente_id")
+  cliente    Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  token      String   @unique
+  /// "ios", "android" ou "web".
+  plataforma String?
+  ultimoUso  DateTime @default(now()) @map("ultimo_uso")
+  criadoEm   DateTime @default(now()) @map("criado_em")
+
+  @@index([clienteId])
+  @@map("dispositivos_push")
 }
 
 enum StatusCliente {
@@ -327,6 +344,10 @@ model ConfiguracoesCobranca {
   encargosDescontoAntecipadoDias Int     @default(0) @map("encargos_desconto_antecipado_dias")
   encargosDescontoPercentual     Decimal @db.Decimal(5, 2) @default(0) @map("encargos_desconto_percentual")
   encargosMensagemPadrao         String? @map("encargos_mensagem_padrao")
+
+  /// Texto enviado junto ao boleto via WhatsApp. Suporta placeholders:
+  /// {cliente}, {numero}, {valor}, {vencimento}, {linhaDigitavel}, {pix}.
+  whatsappMensagemBoleto String? @map("whatsapp_mensagem_boleto")
 
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
 

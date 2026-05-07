@@ -8,6 +8,7 @@ import {
   Menu,
   X,
   LogOut,
+  UserCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { useClienteLogado } from '@/features/cliente-portal/shared/hooks/useClienteLogado';
@@ -24,6 +25,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/cliente', label: 'Início', icon: LayoutDashboard },
   { to: '/cliente/faturas', label: 'Minhas Faturas', icon: FileText },
   { to: '/cliente/notificacoes', label: 'Notificações', icon: Bell },
+  { to: '/cliente/perfil', label: 'Meu perfil', icon: UserCircle },
 ];
 
 export function ClienteLayout() {

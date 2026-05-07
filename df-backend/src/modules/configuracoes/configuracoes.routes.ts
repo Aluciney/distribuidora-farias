@@ -39,6 +39,9 @@ export function serializarConfiguracoes(c: ConfiguracoesCobranca) {
 			descontoPercentual: Number(c.encargosDescontoPercentual),
 			mensagemPadrao: c.encargosMensagemPadrao,
 		},
+		whatsapp: {
+			mensagemBoleto: c.whatsappMensagemBoleto,
+		},
 		atualizadoEm: c.atualizadoEm.toISOString(),
 	}
 }
@@ -127,6 +130,7 @@ export async function rotasConfiguracoes(app: FastifyInstance) {
 				encargosDescontoAntecipadoDias: i.encargos.descontoAntecipadoDias,
 				encargosDescontoPercentual: i.encargos.descontoPercentual,
 				encargosMensagemPadrao: i.encargos.mensagemPadrao ?? null,
+				whatsappMensagemBoleto: i.whatsapp?.mensagemBoleto ?? null,
 			}
 			const c = await app.prisma.configuracoesCobranca.upsert({
 				where: { id: ID_SINGLETON },

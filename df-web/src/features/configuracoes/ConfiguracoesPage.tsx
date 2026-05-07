@@ -1,7 +1,15 @@
 import { useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Building2, Landmark, QrCode, Save, Settings2, ShieldCheck } from 'lucide-react';
+import {
+  Building2,
+  Landmark,
+  MessageSquare,
+  QrCode,
+  Save,
+  Settings2,
+  ShieldCheck,
+} from 'lucide-react';
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -11,6 +19,7 @@ import { FormField } from '@/components/ui/FormField';
 import {
   BANCOS_SUPORTADOS,
   CONFIG_PADRAO,
+  MENSAGEM_WHATSAPP_BOLETO_PADRAO,
   configuracoesProntas,
   type ConfiguracoesCobranca,
 } from '@/features/configuracoes/store/configuracoes.store';
@@ -553,6 +562,36 @@ export function ConfiguracoesPage() {
                 {...register('encargos.mensagemPadrao')}
               />
             </FormField>
+          </CardBody>
+        </Card>
+
+        {/* WhatsApp */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-emerald-300" />
+              <CardTitle>Mensagem do boleto via WhatsApp</CardTitle>
+            </div>
+          </CardHeader>
+          <CardBody className="space-y-3">
+            <FormField
+              label="Texto enviado junto com o PDF"
+              htmlFor="whatsappMensagemBoleto"
+              erro={errors.whatsapp?.mensagemBoleto?.message}
+              ajuda="Placeholders disponíveis: {cliente}, {numero}, {valor}, {vencimento}, {linhaDigitavel}, {pix}"
+            >
+              <Textarea
+                id="whatsappMensagemBoleto"
+                rows={6}
+                placeholder={MENSAGEM_WHATSAPP_BOLETO_PADRAO}
+                {...register('whatsapp.mensagemBoleto')}
+              />
+            </FormField>
+            <p className="text-xs text-slate-500">
+              Esta mensagem é usada quando o boleto é enviado pelo WhatsApp do
+              cliente — você pode marcar o envio direto no modal de nova
+              cobrança.
+            </p>
           </CardBody>
         </Card>
       </form>

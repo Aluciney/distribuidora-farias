@@ -124,6 +124,14 @@ export const cobrancasService = {
     return fromFaturaDTO(dto);
   },
 
+  async enviarBoletoWhatsapp(
+    id: UUID,
+  ): Promise<{ ok: true; enviadoEm: string; destinatario: string }> {
+    return api.post<{ ok: true; enviadoEm: string; destinatario: string }>(
+      `/admin/cobrancas/${id}/enviar-whatsapp`,
+    );
+  },
+
   async pagarComCartao(id: UUID, payload: PagamentoCartaoPayload): Promise<Fatura> {
     const dto = await api.post<FaturaDTO>(`/cliente/faturas/${id}/pagar-com-cartao`, {
       numero: payload.numero,

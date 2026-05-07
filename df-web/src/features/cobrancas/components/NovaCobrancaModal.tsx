@@ -1,22 +1,27 @@
 import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Banknote, QrCode, Settings2 } from 'lucide-react';
+import { Banknote, MessageSquare, QrCode, Settings2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { Switch } from '@/components/ui/Switch';
 import { Textarea } from '@/components/ui/Textarea';
 import { FormField } from '@/components/ui/FormField';
 import { usePedidosFaturaveis } from '@/features/cobrancas/hooks/usePedidos';
-import { useCriarCobranca } from '@/features/cobrancas/hooks/useCobrancas';
+import {
+  useCriarCobranca,
+  useEnviarBoletoWhatsapp,
+} from '@/features/cobrancas/hooks/useCobrancas';
 import {
   novaCobrancaSchema,
   type NovaCobrancaFormValues,
 } from '@/features/cobrancas/schemas/cobranca.schema';
 import { configuracoesProntas, CONFIG_PADRAO } from '@/features/configuracoes/store/configuracoes.store';
 import { useConfiguracoes } from '@/features/configuracoes/services/configuracoes.service';
+import { useStatusWhatsapp } from '@/features/whatsapp/hooks/useWhatsapp';
 import { formatCurrency, formatCNPJ } from '@/utils/format';
 
 interface NovaCobrancaModalProps {
@@ -33,8 +38,11 @@ function dataPadraoVencimento(): string {
 export function NovaCobrancaModal({ aberto, onFechar }: NovaCobrancaModalProps) {
   const { data: pedidos, isLoading: pedidosLoading } = usePedidosFaturaveis();
   const criar = useCriarCobranca();
+  const enviarWhatsapp = useEnviarBoletoWhatsapp();
   const { data: config } = useConfiguracoes();
+  const { data: whatsappInfo } = useStatusWhatsapp();
   const configOk = configuracoesProntas(config ?? CONFIG_PADRAO);
+  const whatsappConectado = whatsappInfo?.status === 'conectado';
 
   const {
     register,
@@ -50,6 +58,7 @@ export function NovaCobrancaModal({ aberto, onFechar }: NovaCobrancaModalProps) 
       valor: 0,
       dataVencimento: dataPadraoVencimento(),
       observacoes: '',
+      enviarBoletoWhatsapp: true,
     },
   });
 
@@ -74,23 +83,32 @@ export function NovaCobrancaModal({ aberto, onFechar }: NovaCobrancaModalProps) 
         valor: 0,
         dataVencimento: dataPadraoVencimento(),
         observacoes: '',
+        enviarBoletoWhatsapp: true,
       });
     }
   }, [aberto, reset]);
 
   const onSubmit = handleSubmit(async (valores) => {
     if (!pedidoSelecionado) return;
-    await criar.mutateAsync({
+    const fatura = await criar.mutateAsync({
       pedidoId: valores.pedidoId,
       clienteId: pedidoSelecionado.clienteId,
       valor: Math.round(valores.valor * 100),
       dataVencimento: new Date(valores.dataVencimento).toISOString(),
       observacoes: valores.observacoes || undefined,
     });
+    if (valores.enviarBoletoWhatsapp && whatsappConectado) {
+      try {
+        await enviarWhatsapp.mutateAsync(fatura.id);
+      } catch {
+        // toast de erro já é exibido pelo hook; mantém a fatura criada.
+      }
+    }
     onFechar();
   });
 
-  const carregando = isSubmitting || criar.isPending;
+  const carregando =
+    isSubmitting || criar.isPending || enviarWhatsapp.isPending;
 
   return (
     <Modal
@@ -236,6 +254,26 @@ export function NovaCobrancaModal({ aberto, onFechar }: NovaCobrancaModalProps) 
             {...register('observacoes')}
           />
         </FormField>
+
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+          <div className="flex items-start gap-2">
+            <MessageSquare className="mt-0.5 h-4 w-4 flex-none text-emerald-300" />
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium text-slate-200">
+                Enviar boleto pelo WhatsApp do cliente
+              </p>
+              <p className="text-xs text-slate-500">
+                {whatsappConectado
+                  ? 'O PDF + a mensagem definida em Configurações serão enviados após gerar.'
+                  : 'WhatsApp desconectado — conecte em Configurações › WhatsApp para usar este envio.'}
+              </p>
+            </div>
+          </div>
+          <Switch
+            disabled={!whatsappConectado}
+            {...register('enviarBoletoWhatsapp')}
+          />
+        </div>
       </form>
     </Modal>
   );

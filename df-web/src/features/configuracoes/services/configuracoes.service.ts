@@ -7,6 +7,7 @@ import { api } from '@/services/api/http';
 import { toast } from '@/store/toast.store';
 import {
   CONFIG_PADRAO,
+  MENSAGEM_WHATSAPP_BOLETO_PADRAO,
   type ConfiguracoesCobranca,
   type TipoChavePix,
 } from '@/features/configuracoes/store/configuracoes.store';
@@ -46,6 +47,9 @@ interface ConfigBackendDTO {
     descontoPercentual: number;
     mensagemPadrao: string | null;
   };
+  whatsapp?: {
+    mensagemBoleto: string | null;
+  };
   atualizadoEm: string;
 }
 
@@ -84,6 +88,10 @@ function fromBackend(dto: ConfigBackendDTO): ConfiguracoesCobranca {
       descontoPercentual: Number(dto.encargos.descontoPercentual),
       mensagemPadrao: dto.encargos.mensagemPadrao ?? '',
     },
+    whatsapp: {
+      mensagemBoleto:
+        dto.whatsapp?.mensagemBoleto ?? MENSAGEM_WHATSAPP_BOLETO_PADRAO,
+    },
   };
 }
 
@@ -119,6 +127,9 @@ function toBackend(c: ConfiguracoesCobranca) {
       descontoAntecipadoDias: c.encargos.descontoAntecipadoDias,
       descontoPercentual: c.encargos.descontoPercentual,
       mensagemPadrao: c.encargos.mensagemPadrao || null,
+    },
+    whatsapp: {
+      mensagemBoleto: c.whatsapp?.mensagemBoleto || null,
     },
   };
 }

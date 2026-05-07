@@ -14,6 +14,7 @@ export const novaCobrancaSchema = z.object({
     .gt(0, 'Valor deve ser maior que zero.'),
   dataVencimento: dataObrigatoria,
   observacoes: z.string().optional().or(z.literal('')),
+  enviarBoletoWhatsapp: z.boolean(),
 });
 export type NovaCobrancaFormValues = z.infer<typeof novaCobrancaSchema>;
 
