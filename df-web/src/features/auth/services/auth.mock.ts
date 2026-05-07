@@ -98,4 +98,30 @@ export const authService = {
   async eu(): Promise<RespostaEu> {
     return api.get<RespostaEu>('/auth/eu');
   },
+
+  async alterarSenha(payload: {
+    senhaAtual: string;
+    senhaNova: string;
+  }): Promise<void> {
+    await api.post('/auth/alterar-senha', payload);
+  },
+
+  async esqueciSenha(payload: {
+    tipo: 'ADMIN' | 'CLIENTE';
+    identificador: string;
+  }): Promise<{ destinatario: string | null }> {
+    return api.post<{ destinatario: string | null }>(
+      '/auth/esqueci-senha',
+      payload,
+    );
+  },
+
+  async redefinirSenha(payload: {
+    tipo: 'ADMIN' | 'CLIENTE';
+    identificador: string;
+    codigo: string;
+    senhaNova: string;
+  }): Promise<void> {
+    await api.post('/auth/redefinir-senha', payload);
+  },
 };

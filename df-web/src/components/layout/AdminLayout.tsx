@@ -14,10 +14,12 @@ import {
   Menu,
   X,
   LogOut,
+  KeyRound,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { useUsuarioLogado } from '@/features/auth/hooks/useUsuarioLogado';
 import { useAuthStore } from '@/store/auth.store';
+import { AlterarSenhaModal } from '@/features/auth/components/AlterarSenhaModal';
 import { PerfilUsuario } from '@/types';
 
 interface NavItem {
@@ -52,6 +54,7 @@ function iniciais(nome: string): string {
 
 export function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [alterarSenhaAberto, setAlterarSenhaAberto] = useState(false);
   const navigate = useNavigate();
   const { data: usuario } = useUsuarioLogado();
   const logout = useAuthStore((s) => s.logout);
@@ -133,6 +136,14 @@ export function AdminLayout() {
           )}
           <button
             type="button"
+            onClick={() => setAlterarSenhaAberto(true)}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+          >
+            <KeyRound className="h-4 w-4" />
+            Alterar senha
+          </button>
+          <button
+            type="button"
             onClick={onLogout}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-100"
           >
@@ -169,6 +180,11 @@ export function AdminLayout() {
           <Outlet />
         </main>
       </div>
+
+      <AlterarSenhaModal
+        aberto={alterarSenhaAberto}
+        onFechar={() => setAlterarSenhaAberto(false)}
+      />
     </div>
   );
 }

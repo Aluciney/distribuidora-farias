@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Building2,
+  KeyRound,
   LogOut,
   Mail,
   Phone,
@@ -21,6 +22,7 @@ import { Card, CardBody } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { FormField } from '@/components/FormField';
 import { Input } from '@/components/Input';
+import { AlterarSenhaModal } from '@/features/auth/AlterarSenhaModal';
 import {
   useAtualizarTelefoneCliente,
   useClientePerfil,
@@ -36,6 +38,7 @@ export default function PerfilScreen() {
 
   const [telefone, setTelefone] = useState('');
   const [erro, setErro] = useState<string | null>(null);
+  const [alterarSenhaAberto, setAlterarSenhaAberto] = useState(false);
 
   useEffect(() => {
     if (perfil) setTelefone(maskTelefone(perfil.telefone));
@@ -180,7 +183,33 @@ export default function PerfilScreen() {
             </View>
           </CardBody>
         </Card>
+
+        <Card>
+          <CardBody className="gap-3">
+            <View className="flex-row items-center gap-2">
+              <KeyRound size={16} color="#fcd34d" />
+              <Text className="text-base font-semibold text-slate-100">
+                Segurança
+              </Text>
+            </View>
+            <Text className="text-xs text-slate-400">
+              Você pode alterar sua senha de acesso ao portal a qualquer momento.
+            </Text>
+            <Button
+              variant="outline"
+              onPress={() => setAlterarSenhaAberto(true)}
+              iconeEsquerda={<KeyRound size={16} color="#e2e8f0" />}
+            >
+              Alterar senha
+            </Button>
+          </CardBody>
+        </Card>
       </ScrollView>
+
+      <AlterarSenhaModal
+        aberto={alterarSenhaAberto}
+        onFechar={() => setAlterarSenhaAberto(false)}
+      />
     </KeyboardAvoidingView>
   );
 }

@@ -29,6 +29,30 @@ export const authService = {
   async eu() {
     return api.get<RespostaEu>('/auth/eu');
   },
+
+  async alterarSenha(payload: { senhaAtual: string; senhaNova: string }) {
+    await api.post('/auth/alterar-senha', payload);
+  },
+
+  async esqueciSenha(payload: { cnpj: string }) {
+    return api.post<{ destinatario: string | null }>('/auth/esqueci-senha', {
+      tipo: 'CLIENTE' as const,
+      identificador: apenasDigitos(payload.cnpj),
+    });
+  },
+
+  async redefinirSenha(payload: {
+    cnpj: string;
+    codigo: string;
+    senhaNova: string;
+  }) {
+    await api.post('/auth/redefinir-senha', {
+      tipo: 'CLIENTE' as const,
+      identificador: apenasDigitos(payload.cnpj),
+      codigo: apenasDigitos(payload.codigo),
+      senhaNova: payload.senhaNova,
+    });
+  },
 };
 
 export const SENHA_DEMO = 'df2026';

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   Text,
   View,
@@ -12,6 +13,7 @@ import { Button } from '@/components/Button';
 import { Card, CardBody } from '@/components/Card';
 import { FormField } from '@/components/FormField';
 import { Input } from '@/components/Input';
+import { EsqueciSenhaModal } from '@/features/auth/EsqueciSenhaModal';
 import { authService, SENHA_DEMO } from '@/features/auth/auth.service';
 import { useAuthStore } from '@/store/auth.store';
 import { toast } from '@/store/toast.store';
@@ -25,6 +27,7 @@ export default function LoginScreen() {
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
+  const [esqueciAberto, setEsqueciAberto] = useState(false);
 
   async function entrar() {
     setErro(null);
@@ -123,6 +126,15 @@ export default function LoginScreen() {
                 Entrar
               </Button>
 
+              <Pressable
+                onPress={() => setEsqueciAberto(true)}
+                className="self-center py-1"
+              >
+                <Text className="text-xs text-slate-400 active:text-slate-200">
+                  Esqueceu sua senha?
+                </Text>
+              </Pressable>
+
               <View className="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
                 <Text className="text-xs font-semibold text-slate-300">
                   Modo demonstração
@@ -139,6 +151,12 @@ export default function LoginScreen() {
           </Card>
         </View>
       </ScrollView>
+
+      <EsqueciSenhaModal
+        aberto={esqueciAberto}
+        onFechar={() => setEsqueciAberto(false)}
+        cnpjInicial={cnpj}
+      />
     </KeyboardAvoidingView>
   );
 }

@@ -9,10 +9,12 @@ import {
   X,
   LogOut,
   UserCircle,
+  KeyRound,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { useClienteLogado } from '@/features/cliente-portal/shared/hooks/useClienteLogado';
 import { NotificacoesDropdown } from '@/features/cliente-portal/notificacoes/components/NotificacoesDropdown';
+import { AlterarSenhaModal } from '@/features/auth/components/AlterarSenhaModal';
 import { useAuthStore } from '@/store/auth.store';
 
 interface NavItem {
@@ -30,6 +32,7 @@ const NAV_ITEMS: NavItem[] = [
 
 export function ClienteLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [alterarSenhaAberto, setAlterarSenhaAberto] = useState(false);
   const navigate = useNavigate();
   const { data: cliente } = useClienteLogado();
   const logout = useAuthStore((s) => s.logout);
@@ -93,7 +96,15 @@ export function ClienteLayout() {
           ))}
         </nav>
 
-        <div className="border-t border-slate-800 p-3">
+        <div className="space-y-1 border-t border-slate-800 p-3">
+          <button
+            type="button"
+            onClick={() => setAlterarSenhaAberto(true)}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+          >
+            <KeyRound className="h-4 w-4" />
+            Alterar senha
+          </button>
           <button
             type="button"
             onClick={onLogout}
@@ -130,6 +141,11 @@ export function ClienteLayout() {
           <Outlet />
         </main>
       </div>
+
+      <AlterarSenhaModal
+        aberto={alterarSenhaAberto}
+        onFechar={() => setAlterarSenhaAberto(false)}
+      />
     </div>
   );
 }

@@ -4,11 +4,14 @@ import { z } from 'zod'
 import { NaoAutorizado } from '../../shared/erros'
 import { AuthService } from './auth.service'
 import {
+	alterarSenhaInputSchema,
 	clientePublicoResumoSchema,
 	definirSenhaInputSchema,
 	erroSchema,
+	esqueciSenhaInputSchema,
 	loginAdminInputSchema,
 	loginClienteInputSchema,
+	redefinirSenhaInputSchema,
 	respostaEuSchema,
 	respostaLoginAdminSchema,
 	respostaLoginClienteSchema,
@@ -133,6 +136,80 @@ export async function rotasAuth(app: FastifyInstance) {
 		},
 		async (req, reply) => {
 			await service.definirSenhaCliente(req.body.cnpj, req.body.senha)
+			return reply.status(204).send(null)
+		},
+	)
+
+	// -------------------------------------------------------------------------
+	// Alterar senha (autenticado, admin ou cliente)
+	// -------------------------------------------------------------------------
+	a.post(
+		'/alterar-senha',
+		{
+			schema: {
+				tags: ['Auth'],
+				summary: 'Altera a própria senha (admin ou cliente autenticado)',
+				security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+				body: alterarSenhaInputSchema,
+				response: { 204: z.null(), 401: erroSchema, 422: erroSchema },
+			},
+			preHandler: [app.requerSessao],
+		},
+		async (req, reply) => {
+			await service.alterarSenha({
+				tipo: req.sessao.tipo,
+				entidadeId: req.sessao.sub,
+				senhaAtual: req.body.senhaAtual,
+				senhaNova: req.body.senhaNova,
+			})
+			return reply.status(204).send(null)
+		},
+	)
+
+	// -------------------------------------------------------------------------
+	// Recuperação de senha
+	// -------------------------------------------------------------------------
+	a.post(
+		'/esqueci-senha',
+		{
+			schema: {
+				tags: ['Auth'],
+				summary: 'Envia código de recuperação para o email cadastrado',
+				body: esqueciSenhaInputSchema,
+				response: {
+					200: z.object({
+						/** Email mascarado (`ma***@dominio.com`) ou null se entidade não existir. */
+						destinatario: z.string().nullable(),
+					}),
+					422: erroSchema,
+				},
+			},
+		},
+		async (req) => {
+			return service.solicitarRecuperacaoSenha({
+				tipo: req.body.tipo,
+				identificador: req.body.identificador,
+			})
+		},
+	)
+
+	a.post(
+		'/redefinir-senha',
+		{
+			schema: {
+				tags: ['Auth'],
+				summary: 'Redefine senha usando o código recebido por email',
+				body: redefinirSenhaInputSchema,
+				response: { 204: z.null(), 422: erroSchema },
+			},
+		},
+		async (req, reply) => {
+			await service.redefinirSenha({
+				tipo: req.body.tipo,
+				identificador: req.body.identificador,
+				codigo: req.body.codigo,
+				senhaNova: req.body.senhaNova,
+			})
 			return reply.status(204).send(null)
 		},
 	)

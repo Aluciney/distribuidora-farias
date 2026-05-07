@@ -12,6 +12,7 @@ declare module 'fastify' {
 	interface FastifyInstance {
 		requerAdmin: (req: FastifyRequest, reply: FastifyReply) => Promise<void>
 		requerCliente: (req: FastifyRequest, reply: FastifyReply) => Promise<void>
+		requerSessao: (req: FastifyRequest, reply: FastifyReply) => Promise<void>
 		requerPerfilAdmin: (req: FastifyRequest, reply: FastifyReply) => Promise<void>
 		assinarSessao: (sessao: SessaoToken) => string
 		setarCookieSessao: (reply: FastifyReply, token: string) => void
@@ -73,6 +74,11 @@ export const authPlugin = fp(async (app) => {
 	app.decorate('requerCliente', async (req: FastifyRequest) => {
 		await verificar(req)
 		if (req.sessao.tipo !== 'CLIENTE') throw new Proibido()
+	})
+
+	/** Aceita qualquer sessão válida (ADMIN ou CLIENTE). */
+	app.decorate('requerSessao', async (req: FastifyRequest) => {
+		await verificar(req)
 	})
 
 	app.decorate('requerPerfilAdmin', async (req: FastifyRequest) => {

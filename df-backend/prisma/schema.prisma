@@ -86,6 +86,23 @@ model DispositivoPush {
   @@map("dispositivos_push")
 }
 
+/// Código de recuperação de senha enviado por email. O código é guardado
+/// hasheado (bcrypt) — nunca em plaintext.
+model CodigoRecuperacaoSenha {
+  id         String    @id @default(uuid())
+  /// "ADMIN" (Usuario) ou "CLIENTE" (Cliente).
+  tipo       String
+  /// ID do `Usuario` ou `Cliente` ao qual o código pertence.
+  entidadeId String    @map("entidade_id")
+  codigoHash String    @map("codigo_hash")
+  expiraEm   DateTime  @map("expira_em")
+  usadoEm    DateTime? @map("usado_em")
+  criadoEm   DateTime  @default(now()) @map("criado_em")
+
+  @@index([tipo, entidadeId])
+  @@map("codigos_recuperacao_senha")
+}
+
 enum StatusCliente {
   ATIVO
   INATIVO

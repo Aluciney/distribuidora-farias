@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { Building2, ShieldCheck, Wallet } from 'lucide-react';
 import { LoginAdminForm } from '@/features/auth/components/LoginAdminForm';
 import { LoginClienteForm } from '@/features/auth/components/LoginClienteForm';
+import { EsqueciSenhaModal } from '@/features/auth/components/EsqueciSenhaModal';
 import { SENHA_DEMO } from '@/features/auth/services/auth.mock';
 import { useAuthStore } from '@/store/auth.store';
 import { cn } from '@/lib/cn';
@@ -19,6 +20,7 @@ export function LoginPage() {
       ? 'CLIENTE'
       : 'ADMIN';
   const [aba, setAba] = useState<Aba>(inicial);
+  const [esqueciAberto, setEsqueciAberto] = useState(false);
 
   useEffect(() => {
     setAba(inicial);
@@ -101,11 +103,7 @@ export function LoginPage() {
             <button
               type="button"
               className="text-slate-400 hover:text-slate-200"
-              onClick={() =>
-                window.alert(
-                  'Recuperação de senha será habilitada na próxima iteração.',
-                )
-              }
+              onClick={() => setEsqueciAberto(true)}
             >
               Esqueceu sua senha?
             </button>
@@ -123,6 +121,12 @@ export function LoginPage() {
           </div>
         </main>
       </div>
+
+      <EsqueciSenhaModal
+        aberto={esqueciAberto}
+        onFechar={() => setEsqueciAberto(false)}
+        tipoInicial={aba}
+      />
     </div>
   );
 }
