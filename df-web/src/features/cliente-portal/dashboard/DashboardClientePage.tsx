@@ -1,80 +1,50 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AlertCircle,
   ArrowRight,
+  Building2,
   CalendarClock,
   CheckCircle2,
+  Layers,
   TrendingUp,
   Wallet,
 } from 'lucide-react';
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { useFaturasCliente } from '@/features/cliente-portal/faturas/hooks/useFaturasCliente';
-import { useClienteLogado } from '@/features/cliente-portal/shared/hooks/useClienteLogado';
+import { useDashboardCliente } from '@/features/cliente-portal/dashboard/hooks/useDashboardCliente';
+import { useUsuarioClienteLogado } from '@/features/cliente-portal/shared/hooks/useClienteLogado';
 import { PagamentoModal } from '@/features/cliente-portal/faturas/components/PagamentoModal';
+import { cobrancasService } from '@/features/cobrancas/services/cobrancas.mock';
 import { StatusFatura, type Fatura } from '@/types';
 import { formatCurrency, formatDate } from '@/utils/format';
+import { useAuthStore } from '@/store/auth.store';
 import { cn } from '@/lib/cn';
 
-interface ResumoCliente {
-  totalGasto: number;
-  totalEmAberto: number;
-  totalVencido: number;
-  qtdAberto: number;
-  proximas: Fatura[];
-}
-
-function calcularResumo(faturas: Fatura[]): ResumoCliente {
-  let totalGasto = 0;
-  let totalEmAberto = 0;
-  let totalVencido = 0;
-  let qtdAberto = 0;
-  for (const f of faturas) {
-    if (f.status === StatusFatura.PAGO) {
-      totalGasto += f.valorPago ?? f.valor;
-    }
-    if (f.status === StatusFatura.PENDENTE) {
-      totalEmAberto += f.valor;
-      qtdAberto += 1;
-    }
-    if (f.status === StatusFatura.VENCIDO) {
-      totalVencido += f.valor;
-      qtdAberto += 1;
-    }
-  }
-  const proximas = faturas
-    .filter(
-      (f) =>
-        f.status === StatusFatura.PENDENTE || f.status === StatusFatura.VENCIDO,
-    )
-    .sort((a, b) =>
-      a.dataVencimento < b.dataVencimento
-        ? -1
-        : a.dataVencimento > b.dataVencimento
-          ? 1
-          : 0,
-    )
-    .slice(0, 4);
-  return {
-    totalGasto,
-    totalEmAberto,
-    totalVencido,
-    qtdAberto,
-    proximas,
-  };
-}
-
 export function DashboardClientePage() {
-  const { data: cliente } = useClienteLogado();
-  const { data, isLoading, isError } = useFaturasCliente({
-    status: 'TODOS',
-    porPagina: 100,
-  });
-  const resumo = useMemo(() => calcularResumo(data?.itens ?? []), [data]);
+  const { data: usuario } = useUsuarioClienteLogado();
+  const filialSelecionadaId = useAuthStore((s) => s.filialSelecionadaId);
+  const filiais = useAuthStore((s) => s.filiais);
+  const filialAtiva = filialSelecionadaId
+    ? filiais.find((f) => f.id === filialSelecionadaId)
+    : null;
+  const { data, isLoading, isError } = useDashboardCliente();
   const [faturaSelecionada, setFaturaSelecionada] = useState<Fatura | null>(
     null,
   );
+
+  const totalGasto = data?.totalGasto ?? 0;
+  const totalEmAberto = data?.totalEmAberto ?? 0;
+  const totalVencido = data?.totalVencido ?? 0;
+  const qtdAberto = data?.qtdFaturasEmAberto ?? 0;
+  const proximas = data?.proximas ?? [];
+
+  async function abrirFatura(faturaId: string) {
+    // O resumo do dashboard traz só id+numero+valor+vencimento+status+filial.
+    // Para o modal de pagamento precisamos do detalhe completo (boleto+pix).
+    const fatura = await cobrancasService.obter(faturaId);
+    if (fatura) setFaturaSelecionada(fatura);
+  }
 
   return (
     <div className="space-y-6">
@@ -83,10 +53,26 @@ export function DashboardClientePage() {
           Bem-vindo de volta
         </p>
         <h2 className="text-2xl font-semibold text-slate-100">
-          {cliente?.razaoSocial ?? 'Carregando...'}
+          {usuario?.nome ?? 'Carregando...'}
         </h2>
-        <p className="text-sm text-slate-400">
-          Aqui você acompanha seus pagamentos e quita suas faturas em segundos.
+        <p className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
+          {filialAtiva ? (
+            <>
+              <Building2 className="h-4 w-4 text-sky-400" />
+              Visualizando dados de
+              <span className="font-medium text-slate-200">
+                {filialAtiva.nomeFantasia ?? filialAtiva.razaoSocial}
+              </span>
+            </>
+          ) : (
+            <>
+              <Layers className="h-4 w-4 text-emerald-400" />
+              Visão consolidada de
+              <span className="font-medium text-slate-200">
+                {filiais.length} filial(is)
+              </span>
+            </>
+          )}
         </p>
       </header>
 
@@ -102,7 +88,7 @@ export function DashboardClientePage() {
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCliente
           titulo="Total gasto (histórico)"
-          valor={formatCurrency(resumo.totalGasto)}
+          valor={formatCurrency(totalGasto)}
           legenda="Faturas pagas"
           icone={<Wallet className="h-5 w-5" />}
           tom="emerald"
@@ -110,7 +96,7 @@ export function DashboardClientePage() {
         />
         <KpiCliente
           titulo="Em aberto"
-          valor={formatCurrency(resumo.totalEmAberto)}
+          valor={formatCurrency(totalEmAberto)}
           legenda="Aguardando pagamento"
           icone={<TrendingUp className="h-5 w-5" />}
           tom="sky"
@@ -118,7 +104,7 @@ export function DashboardClientePage() {
         />
         <KpiCliente
           titulo="Vencidas"
-          valor={formatCurrency(resumo.totalVencido)}
+          valor={formatCurrency(totalVencido)}
           legenda="Regularize quanto antes"
           icone={<AlertCircle className="h-5 w-5" />}
           tom="rose"
@@ -126,7 +112,7 @@ export function DashboardClientePage() {
         />
         <KpiCliente
           titulo="Faturas em aberto"
-          valor={String(resumo.qtdAberto)}
+          valor={String(qtdAberto)}
           legenda="Pendentes + vencidas"
           icone={<CalendarClock className="h-5 w-5" />}
           tom="amber"
@@ -162,7 +148,7 @@ export function DashboardClientePage() {
                 />
               ))}
             </div>
-          ) : resumo.proximas.length === 0 ? (
+          ) : proximas.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
               <CheckCircle2 className="h-8 w-8 text-emerald-400" />
               <p className="text-sm font-medium text-slate-200">
@@ -174,7 +160,7 @@ export function DashboardClientePage() {
             </div>
           ) : (
             <ul className="divide-y divide-slate-800">
-              {resumo.proximas.map((f) => {
+              {proximas.map((f) => {
                 const tom =
                   f.status === StatusFatura.VENCIDO ? 'rose' : 'amber';
                 const label =
@@ -183,7 +169,7 @@ export function DashboardClientePage() {
                   <li key={f.id}>
                     <button
                       type="button"
-                      onClick={() => setFaturaSelecionada(f)}
+                      onClick={() => abrirFatura(f.id)}
                       className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-800/40"
                     >
                       <div className="min-w-0 flex-1">
@@ -192,6 +178,12 @@ export function DashboardClientePage() {
                             {f.numero}
                           </p>
                           <Badge tom={tom}>{label}</Badge>
+                          {!filialAtiva && (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-400">
+                              <Building2 className="h-3 w-3" />
+                              {f.filial.nomeFantasia ?? f.filial.razaoSocial}
+                            </span>
+                          )}
                         </div>
                         <p className="mt-0.5 text-sm text-slate-200">
                           Vence em {formatDate(f.dataVencimento)}

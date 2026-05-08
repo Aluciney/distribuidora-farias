@@ -52,14 +52,12 @@ export type StatusPedido = (typeof StatusPedido)[keyof typeof StatusPedido];
 export const PerfilUsuario = {
   ADMIN: 'ADMIN',
   FINANCEIRO: 'FINANCEIRO',
-  CLIENTE: 'CLIENTE',
 } as const;
 export type PerfilUsuario = (typeof PerfilUsuario)[keyof typeof PerfilUsuario];
 
 export const CanalNotificacao = {
   EMAIL: 'EMAIL',
   WHATSAPP: 'WHATSAPP',
-  SMS: 'SMS',
 } as const;
 export type CanalNotificacao = (typeof CanalNotificacao)[keyof typeof CanalNotificacao];
 
@@ -88,6 +86,11 @@ export interface Endereco {
 // Cliente
 // ---------------------------------------------------------------------------
 
+/**
+ * Cliente representa a loja/filial — entidade fiscal. Não faz mais login
+ * próprio nem guarda dados de contato; quem loga é o `UsuarioCliente`
+ * (holding/matriz) vinculado via `UsuarioClienteAcesso` (N:N).
+ */
 export interface Cliente {
   id: UUID;
   /** Identificador único de negócio. Sempre apenas dígitos (14). */
@@ -95,8 +98,6 @@ export interface Cliente {
   razaoSocial: string;
   nomeFantasia?: string;
   inscricaoEstadual?: string;
-  email: string;
-  telefone: string;
   endereco: Endereco;
   status: StatusCliente;
   /** Limite de crédito concedido em centavos. */
@@ -104,6 +105,32 @@ export interface Cliente {
   observacoes?: string;
   criadoEm: ISODateString;
   atualizadoEm: ISODateString;
+}
+
+// ---------------------------------------------------------------------------
+// UsuarioCliente (holding/matriz que faz login no portal)
+// ---------------------------------------------------------------------------
+
+export interface FilialAcesso {
+  id: UUID;
+  cnpj: string;
+  razaoSocial: string;
+  nomeFantasia?: string;
+  status: StatusCliente;
+  /** Marca a filial-sede do grupo (informativo — permissão é a mesma). */
+  principal: boolean;
+}
+
+export interface UsuarioCliente {
+  id: UUID;
+  nome: string;
+  email: string;
+  telefone: string;
+  ativo: boolean;
+  /** `false` quando ainda não definiu a senha inicial (foi convidado). */
+  senhaDefinida?: boolean;
+  ultimoAcesso?: ISODateString;
+  filiais: FilialAcesso[];
 }
 
 // ---------------------------------------------------------------------------
@@ -178,8 +205,6 @@ export interface Fatura {
   clienteId: UUID;
   cliente?: Pick<Cliente, 'id' | 'cnpj' | 'razaoSocial'> & {
     nomeFantasia?: string;
-    email?: string;
-    telefone?: string;
   };
   valor: ValorEmCentavos;
   /** Valor pago (parcial ou total). */
@@ -264,6 +289,13 @@ export interface Notificacao {
   naoLida: boolean;
   faturaId?: UUID;
   criadoEm: ISODateString;
+  /** Filial (loja) à qual a notificação se refere — usado no portal para o
+   * cliente identificar de qual loja é o aviso. */
+  filial?: {
+    id: UUID;
+    razaoSocial: string;
+    nomeFantasia?: string;
+  };
 }
 
 // ---------------------------------------------------------------------------

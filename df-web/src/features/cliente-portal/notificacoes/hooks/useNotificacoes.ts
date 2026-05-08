@@ -5,36 +5,30 @@ import { useAuthStore } from '@/store/auth.store';
 const KEY_BASE = ['notificacoes'] as const;
 
 export function useNotificacoes() {
-  const clienteId = useAuthStore((s) => s.clienteId);
+  const usuarioClienteId = useAuthStore((s) => s.usuarioClienteId);
   return useQuery({
-    queryKey: [...KEY_BASE, clienteId],
+    queryKey: [...KEY_BASE, usuarioClienteId],
     queryFn: () =>
-      clienteId ? notificacoesService.listar(clienteId) : Promise.resolve([]),
-    enabled: Boolean(clienteId),
+      usuarioClienteId
+        ? notificacoesService.listar()
+        : Promise.resolve([]),
+    enabled: Boolean(usuarioClienteId),
     refetchInterval: 30_000,
   });
 }
 
 export function useMarcarNotificacaoLida() {
-  const clienteId = useAuthStore((s) => s.clienteId);
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) =>
-      clienteId
-        ? notificacoesService.marcarComoLida(clienteId, id)
-        : Promise.resolve(),
+    mutationFn: (id: string) => notificacoesService.marcarComoLida(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY_BASE }),
   });
 }
 
 export function useMarcarTodasComoLidas() {
-  const clienteId = useAuthStore((s) => s.clienteId);
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () =>
-      clienteId
-        ? notificacoesService.marcarTodasComoLidas(clienteId)
-        : Promise.resolve(),
+    mutationFn: () => notificacoesService.marcarTodasComoLidas(),
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY_BASE }),
   });
 }

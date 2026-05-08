@@ -1,4 +1,4 @@
-import type { CanalNotificacao, Cliente, Fatura, PrismaClient } from '@prisma/client'
+import type { CanalNotificacao, Cliente, Fatura, PrismaClient, UsuarioCliente } from '@prisma/client'
 import { format } from 'date-fns'
 
 /**
@@ -14,11 +14,11 @@ function addUTCDays(d: Date, days: number): Date {
 	return new Date(d.getTime() + days * 24 * 60 * 60 * 1000)
 }
 import { type DadosJobNotificacao, getFilaNotificacoes } from '../../queues/filas'
+import { obterResponsaveisDoCliente } from '../../shared/tenancy'
 import { formatarBrl } from '../../shared/utils/moeda'
 import { PushService } from '../push/push.service'
 import type { ICanalNotificacao } from './canais/canal.interface'
 import { EmailCanalLog, EmailCanalSmtp } from './canais/email.canal'
-import { SmsCanalLog } from './canais/sms.canal'
 import { WhatsAppCanalBaileys, WhatsAppCanalLog } from './canais/whatsapp.canal'
 
 interface ExecutarOpcoes {
@@ -45,16 +45,17 @@ export class NotificacoesService {
 		this.canais = new Map<CanalNotificacao, ICanalNotificacao>([
 			['EMAIL', canais?.EMAIL ?? defaultCanalEmail()],
 			['WHATSAPP', canais?.WHATSAPP ?? defaultCanalWhatsApp()],
-			['SMS', canais?.SMS ?? new SmsCanalLog()],
 		])
 		this.push = new PushService(prisma)
 	}
 
 	/**
-	 * Varre regras ativas e enfileira um job de notificação para cada (fatura × ação).
+	 * Varre regras ativas e enfileira um job por (fatura × ação × holding
+	 * vinculada). Filiais órfãs (sem holding) ficam registradas no audit
+	 * trail com erro `FILIAL_SEM_RESPONSAVEL` e não enfileiram nada.
 	 * O envio em si fica a cargo do worker BullMQ que consome `notificacoes`.
 	 */
-	async enfileirarRegua(opts: ExecutarOpcoes = {}): Promise<{ enfileirados: number }> {
+	async enfileirarRegua(opts: ExecutarOpcoes = {}): Promise<{ enfileirados: number; orfas: number }> {
 		const hoje = startOfUTCDay(opts.dataReferencia ?? new Date())
 		const regras = await this.prisma.regraCobranca.findMany({
 			where: { ativo: true, ...(opts.regraId ? { id: opts.regraId } : {}) },
@@ -71,6 +72,7 @@ export class NotificacoesService {
 
 		const fila = getFilaNotificacoes()
 		let enfileirados = 0
+		let orfas = 0
 
 		for (const regra of regras) {
 			const alvo = addUTCDays(hoje, -regra.diasOffset)
@@ -106,8 +108,29 @@ export class NotificacoesService {
 			}
 
 			for (const fatura of faturas) {
-				// Push imediato — uma vez por (regra × fatura), independente de
-				// quantas ações (email/whatsapp/sms) a regra dispara nos canais.
+				const responsaveis = await obterResponsaveisDoCliente(this.prisma, fatura.clienteId)
+
+				if (responsaveis.length === 0) {
+					orfas++
+					await this.prisma.notificacao.create({
+						data: {
+							clienteId: fatura.clienteId,
+							faturaId: fatura.id,
+							regraId: regra.id,
+							titulo: `Régua sem responsável — ${regra.nome}`,
+							mensagem: `Filial sem holding vinculada — vincule um UsuarioCliente para que a régua "${regra.nome}" possa notificar.`,
+							erro: 'FILIAL_SEM_RESPONSAVEL',
+						},
+					})
+					this.logger.warn(
+						{ faturaId: fatura.id, clienteId: fatura.clienteId },
+						'Filial órfã — régua não enfileirou disparos',
+					)
+					continue
+				}
+
+				// Push imediato — uma vez por (regra × fatura). O push.service
+				// resolve internamente todos os tokens das holdings vinculadas.
 				void this.push
 					.enviarParaCliente({
 						clienteId: fatura.clienteId,
@@ -124,26 +147,30 @@ export class NotificacoesService {
 				for (const acao of regra.acoes) {
 					const mensagem = this.renderizar(acao.mensagem, fatura, fatura.cliente)
 					const assunto = acao.assunto ? this.renderizar(acao.assunto, fatura, fatura.cliente) : null
-					const destinatario = this.destinatarioPara(acao.canal, fatura.cliente)
-					const payload: DadosJobNotificacao = {
-						clienteId: fatura.clienteId,
-						faturaId: fatura.id,
-						regraId: regra.id,
-						canal: acao.canal,
-						destinatario,
-						assunto,
-						mensagem,
-						tituloRegra: regra.nome,
+					for (const responsavel of responsaveis) {
+						const destinatario = this.destinatarioPara(acao.canal, responsavel)
+						if (!destinatario) continue
+						const payload: DadosJobNotificacao = {
+							clienteId: fatura.clienteId,
+							usuarioClienteId: responsavel.id,
+							faturaId: fatura.id,
+							regraId: regra.id,
+							canal: acao.canal,
+							destinatario,
+							assunto,
+							mensagem,
+							tituloRegra: regra.nome,
+						}
+						// Não pode conter `:` — BullMQ reserva esse caractere para chaves internas.
+						const jobId = `${regra.id}_${fatura.id}_${acao.id}_${responsavel.id}_${format(hoje, 'yyyy-MM-dd')}`
+						await fila.add('disparar', payload, { jobId })
+						enfileirados++
 					}
-					// Não pode conter `:` — BullMQ reserva esse caractere para chaves internas.
-					const jobId = `${regra.id}_${fatura.id}_${acao.id}_${format(hoje, 'yyyy-MM-dd')}`
-					await fila.add('disparar', payload, { jobId })
-					enfileirados++
 				}
 			}
 		}
 
-		return { enfileirados }
+		return { enfileirados, orfas }
 	}
 
 	/**
@@ -183,6 +210,7 @@ export class NotificacoesService {
 			await this.prisma.notificacao.create({
 				data: {
 					clienteId: payload.clienteId,
+					usuarioClienteId: payload.usuarioClienteId,
 					faturaId: payload.faturaId,
 					regraId: payload.regraId,
 					canal: payload.canal,
@@ -195,6 +223,7 @@ export class NotificacoesService {
 			await this.prisma.notificacao.create({
 				data: {
 					clienteId: payload.clienteId,
+					usuarioClienteId: payload.usuarioClienteId,
 					faturaId: payload.faturaId,
 					regraId: payload.regraId,
 					canal: payload.canal,
@@ -211,7 +240,7 @@ export class NotificacoesService {
 	 * Mantido por compatibilidade — execução síncrona usada por testes/disparo manual.
 	 * Em produção, prefira `enfileirarRegua` (que delega ao worker BullMQ).
 	 */
-	async executarRegua(opts: ExecutarOpcoes = {}): Promise<{ disparadas: number; erros: number }> {
+	async executarRegua(opts: ExecutarOpcoes = {}): Promise<{ disparadas: number; erros: number; orfas: number }> {
 		const hoje = startOfUTCDay(opts.dataReferencia ?? new Date())
 		const regras = await this.prisma.regraCobranca.findMany({
 			where: { ativo: true, ...(opts.regraId ? { id: opts.regraId } : {}) },
@@ -220,6 +249,7 @@ export class NotificacoesService {
 
 		let disparadas = 0
 		let erros = 0
+		let orfas = 0
 
 		for (const regra of regras) {
 			const alvo = addUTCDays(hoje, -regra.diasOffset)
@@ -234,28 +264,40 @@ export class NotificacoesService {
 			})
 
 			for (const fatura of faturas) {
+				const responsaveis = await obterResponsaveisDoCliente(this.prisma, fatura.clienteId)
+				if (responsaveis.length === 0) {
+					orfas++
+					continue
+				}
 				for (const acao of regra.acoes) {
-					const payload: DadosJobNotificacao = {
-						clienteId: fatura.clienteId,
-						faturaId: fatura.id,
-						regraId: regra.id,
-						canal: acao.canal,
-						destinatario: this.destinatarioPara(acao.canal, fatura.cliente),
-						assunto: acao.assunto ? this.renderizar(acao.assunto, fatura, fatura.cliente) : null,
-						mensagem: this.renderizar(acao.mensagem, fatura, fatura.cliente),
-						tituloRegra: regra.nome,
-					}
-					try {
-						await this.disparar(payload)
-						disparadas++
-					} catch {
-						erros++
+					for (const responsavel of responsaveis) {
+						const destinatario = this.destinatarioPara(acao.canal, responsavel)
+						if (!destinatario) continue
+						const payload: DadosJobNotificacao = {
+							clienteId: fatura.clienteId,
+							usuarioClienteId: responsavel.id,
+							faturaId: fatura.id,
+							regraId: regra.id,
+							canal: acao.canal,
+							destinatario,
+							assunto: acao.assunto
+								? this.renderizar(acao.assunto, fatura, fatura.cliente)
+								: null,
+							mensagem: this.renderizar(acao.mensagem, fatura, fatura.cliente),
+							tituloRegra: regra.nome,
+						}
+						try {
+							await this.disparar(payload)
+							disparadas++
+						} catch {
+							erros++
+						}
 					}
 				}
 			}
 		}
 
-		return { disparadas, erros }
+		return { disparadas, erros, orfas }
 	}
 
 	private renderizar(template: string, fatura: Fatura, cliente: Cliente): string {
@@ -268,9 +310,10 @@ export class NotificacoesService {
 			.replaceAll('{{pix}}', fatura.pixCopiaECola)
 	}
 
-	private destinatarioPara(canal: CanalNotificacao, cliente: Cliente): string {
-		if (canal === 'EMAIL') return cliente.email
-		return cliente.telefone
+	private destinatarioPara(canal: CanalNotificacao, usuario: UsuarioCliente): string | null {
+		if (canal === 'EMAIL') return usuario.email || null
+		const tel = (usuario.telefone || '').replace(/\D/g, '')
+		return tel.length >= 10 ? tel : null
 	}
 }
 

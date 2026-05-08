@@ -27,7 +27,9 @@
       "Bash(echo \"Exit: $?\")",
       "Bash(npx expo *)",
       "Bash(echo \"Exit back: $?\")",
-      "Bash(echo \"Exit mobile: $?\")"
+      "Bash(echo \"Exit mobile: $?\")",
+      "Bash(echo \"EXITCODE=$?\")",
+      "Bash(npx vite *)"
     ]
   }
 }

@@ -143,7 +143,7 @@ export const inadimplenciaService = {
         const faturasCliente = await cobrancasService.listar({ clienteId: c.clienteId });
         return {
           cliente: { id: c.clienteId, cnpj: c.cnpj, razaoSocial: c.razaoSocial },
-          faturas: faturasCliente,
+          faturas: faturasCliente.itens,
           valorVencido: c.totalVencido,
           valorAVencer7Dias: Math.max(0, c.totalEmAberto - c.totalVencido),
           diasAtrasoMaximo: c.maiorAtrasoDias,

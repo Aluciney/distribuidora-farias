@@ -48,7 +48,7 @@ export function ReguaPage() {
             Régua de Cobrança
           </h2>
           <p className="mt-1 text-sm text-slate-400">
-            Automatize lembretes e cobranças por email, WhatsApp e SMS antes,
+            Automatize lembretes e cobranças por email e WhatsApp antes,
             durante e após o vencimento.
           </p>
         </div>

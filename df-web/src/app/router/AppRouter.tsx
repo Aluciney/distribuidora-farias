@@ -11,6 +11,7 @@ import { InadimplenciaPage } from '@/features/inadimplencia/InadimplenciaPage';
 import { ConfiguracoesPage } from '@/features/configuracoes/ConfiguracoesPage';
 import { ReguaPage } from '@/features/regua-cobranca/ReguaPage';
 import { UsuariosPage } from '@/features/usuarios/UsuariosPage';
+import { UsuariosClientePage } from '@/features/usuarios-cliente/UsuariosClientePage';
 import { ProdutosPage } from '@/features/produtos/ProdutosPage';
 import { WhatsappPage } from '@/features/whatsapp/WhatsappPage';
 import { DashboardClientePage } from '@/features/cliente-portal/dashboard/DashboardClientePage';
@@ -41,6 +42,7 @@ export function AppRouter() {
           <Route path="regua-cobranca" element={<ReguaPage />} />
           <Route path="whatsapp" element={<WhatsappPage />} />
           <Route path="usuarios" element={<UsuariosPage />} />
+          <Route path="usuarios-cliente" element={<UsuariosClientePage />} />
           <Route path="produtos" element={<ProdutosPage />} />
           <Route path="configuracoes" element={<ConfiguracoesPage />} />
         </Route>
@@ -49,7 +51,7 @@ export function AppRouter() {
         <Route
           path="/cliente"
           element={
-            <RequireAuth tipo="CLIENTE">
+            <RequireAuth tipo="USUARIO_CLIENTE">
               <ClienteLayout />
             </RequireAuth>
           }

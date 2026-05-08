@@ -1,4 +1,4 @@
-import { ChevronRight } from 'lucide-react';
+import { Building2, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { MetodoPagamento, StatusFatura, type Fatura } from '@/types';
 import { formatCurrency, formatDate } from '@/utils/format';
@@ -7,6 +7,9 @@ import { cn } from '@/lib/cn';
 interface FaturasClienteTabelaProps {
   faturas: Fatura[];
   onSelecionar: (fatura: Fatura) => void;
+  /** Quando true, exibe a filial (loja) à qual cada fatura pertence. Útil
+   * quando a holding tem várias filiais e a tabela mostra todas juntas. */
+  exibirFilial?: boolean;
 }
 
 const STATUS_TOM = {
@@ -35,12 +38,15 @@ const METODO_LABEL: Record<MetodoPagamento, string> = {
 export function FaturasClienteTabela({
   faturas,
   onSelecionar,
+  exibirFilial = false,
 }: FaturasClienteTabelaProps) {
   return (
     <ul className="divide-y divide-slate-800">
       {faturas.map((f) => {
         const acionavel =
           f.status === StatusFatura.PENDENTE || f.status === StatusFatura.VENCIDO;
+        const nomeFilial =
+          f.cliente?.nomeFantasia ?? f.cliente?.razaoSocial ?? null;
         return (
           <li key={f.id}>
             <button
@@ -56,6 +62,12 @@ export function FaturasClienteTabela({
                   <Badge tom={STATUS_TOM[f.status]}>
                     {STATUS_LABEL[f.status]}
                   </Badge>
+                  {exibirFilial && nomeFilial && (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-400">
+                      <Building2 className="h-3 w-3" />
+                      {nomeFilial}
+                    </span>
+                  )}
                 </div>
                 <p className="mt-1 text-sm font-medium text-slate-100">
                   Vencimento {formatDate(f.dataVencimento)}

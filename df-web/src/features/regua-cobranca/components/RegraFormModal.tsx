@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Mail, MessageCircle, Plus, Smartphone, Trash2 } from 'lucide-react';
+import { Mail, MessageCircle, Plus, Trash2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -53,7 +53,6 @@ const VALORES_PADRAO: RegraFormValues = {
 const CANAL_ICONE = {
   [CanalNotificacao.EMAIL]: Mail,
   [CanalNotificacao.WHATSAPP]: MessageCircle,
-  [CanalNotificacao.SMS]: Smartphone,
 } as const;
 
 export function RegraFormModal({
@@ -337,7 +336,6 @@ export function RegraFormModal({
                         <option value={CanalNotificacao.WHATSAPP}>
                           WhatsApp
                         </option>
-                        <option value={CanalNotificacao.SMS}>SMS</option>
                       </Select>
                     </FormField>
 

@@ -12,7 +12,8 @@ import {
   KeyRound,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { useClienteLogado } from '@/features/cliente-portal/shared/hooks/useClienteLogado';
+import { useUsuarioClienteLogado } from '@/features/cliente-portal/shared/hooks/useClienteLogado';
+import { SeletorFilial } from '@/features/cliente-portal/shared/components/SeletorFilial';
 import { NotificacoesDropdown } from '@/features/cliente-portal/notificacoes/components/NotificacoesDropdown';
 import { AlterarSenhaModal } from '@/features/auth/components/AlterarSenhaModal';
 import { useAuthStore } from '@/store/auth.store';
@@ -34,7 +35,7 @@ export function ClienteLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [alterarSenhaAberto, setAlterarSenhaAberto] = useState(false);
   const navigate = useNavigate();
-  const { data: cliente } = useClienteLogado();
+  const { data: usuario } = useUsuarioClienteLogado();
   const logout = useAuthStore((s) => s.logout);
 
   const onLogout = () => {
@@ -126,14 +127,15 @@ export function ClienteLayout() {
           >
             <Menu className="h-5 w-5" />
           </button>
-          <div className="flex-1 truncate">
+          <div className="min-w-0 flex-1 truncate">
             <p className="text-xs uppercase tracking-wider text-slate-500">
-              Cliente
+              Holding
             </p>
             <h1 className="truncate text-sm font-semibold text-slate-100">
-              {cliente?.nomeFantasia ?? cliente?.razaoSocial ?? 'Carregando...'}
+              {usuario?.nome ?? 'Carregando...'}
             </h1>
           </div>
+          <SeletorFilial />
           <NotificacoesDropdown />
         </header>
 

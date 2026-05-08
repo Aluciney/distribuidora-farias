@@ -5,17 +5,12 @@ export const loginAdminInputSchema = z.object({
 	senha: z.string().min(1),
 })
 
-export const loginClienteInputSchema = z.object({
-	cnpj: z.string().min(11),
+export const loginUsuarioClienteInputSchema = z.object({
+	email: z.string().email(),
 	senha: z.string().min(1),
 })
 
-export const definirSenhaInputSchema = z.object({
-	cnpj: z.string().min(11),
-	senha: z.string().min(4),
-})
-
-export const tipoEntidadeSchema = z.enum(['ADMIN', 'CLIENTE'])
+export const tipoEntidadeSchema = z.enum(['ADMIN', 'USUARIO_CLIENTE'])
 
 export const alterarSenhaInputSchema = z.object({
 	senhaAtual: z.string().min(1),
@@ -24,13 +19,12 @@ export const alterarSenhaInputSchema = z.object({
 
 export const esqueciSenhaInputSchema = z.object({
 	tipo: tipoEntidadeSchema,
-	/** Email para ADMIN, CNPJ para CLIENTE. */
-	identificador: z.string().min(3),
+	email: z.string().email(),
 })
 
 export const redefinirSenhaInputSchema = z.object({
 	tipo: tipoEntidadeSchema,
-	identificador: z.string().min(3),
+	email: z.string().email(),
 	codigo: z
 		.string()
 		.transform((v) => v.replace(/\D/g, ''))
@@ -48,13 +42,26 @@ export const usuarioPublicoSchema = z.object({
 	criadoEm: z.string().datetime(),
 })
 
-export const clientePublicoResumoSchema = z.object({
+/// Resumo público do UsuarioCliente (holding) — o que o portal expõe na sessão.
+/// Inclui um resumo das filiais acessíveis para que o frontend possa montar
+/// o seletor de filial logo após o login.
+export const usuarioClientePublicoSchema = z.object({
 	id: z.string(),
-	cnpj: z.string(),
-	razaoSocial: z.string(),
-	nomeFantasia: z.string().nullable(),
+	nome: z.string(),
 	email: z.string(),
-	status: z.enum(['ATIVO', 'INATIVO', 'BLOQUEADO']),
+	telefone: z.string(),
+	ativo: z.boolean(),
+	ultimoAcesso: z.string().datetime().nullable(),
+	filiais: z.array(
+		z.object({
+			id: z.string(),
+			cnpj: z.string(),
+			razaoSocial: z.string(),
+			nomeFantasia: z.string().nullable(),
+			status: z.enum(['ATIVO', 'INATIVO', 'BLOQUEADO']),
+			principal: z.boolean(),
+		}),
+	),
 })
 
 export const respostaLoginAdminSchema = z.object({
@@ -62,15 +69,15 @@ export const respostaLoginAdminSchema = z.object({
 	token: z.string(),
 })
 
-export const respostaLoginClienteSchema = z.object({
-	cliente: clientePublicoResumoSchema,
+export const respostaLoginUsuarioClienteSchema = z.object({
+	usuarioCliente: usuarioClientePublicoSchema,
 	token: z.string(),
 })
 
 export const respostaEuSchema = z.object({
-	tipo: z.enum(['ADMIN', 'CLIENTE']),
+	tipo: tipoEntidadeSchema,
 	usuario: usuarioPublicoSchema.nullable(),
-	cliente: clientePublicoResumoSchema.nullable(),
+	usuarioCliente: usuarioClientePublicoSchema.nullable(),
 })
 
 export const erroSchema = z.object({

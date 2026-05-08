@@ -1,6 +1,6 @@
 export interface SessaoToken {
 	sub: string
-	tipo: 'ADMIN' | 'CLIENTE'
+	tipo: 'ADMIN' | 'USUARIO_CLIENTE'
 	perfil?: 'ADMIN' | 'FINANCEIRO'
 	iat?: number
 	exp?: number

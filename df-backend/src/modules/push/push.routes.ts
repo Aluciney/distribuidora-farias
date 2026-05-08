@@ -11,7 +11,7 @@ const registrarTokenSchema = z.object({
 
 export async function rotasPushCliente(app: FastifyInstance) {
 	const a = app.withTypeProvider<ZodTypeProvider>()
-	const guard = [app.requerCliente]
+	const guard = [app.requerUsuarioCliente]
 	const service = new PushService(app.prisma, app.log)
 
 	a.post(
@@ -31,7 +31,7 @@ export async function rotasPushCliente(app: FastifyInstance) {
 		},
 		async (req) => {
 			await service.registrarToken({
-				clienteId: req.sessao.sub,
+				usuarioClienteId: req.sessao.sub,
 				token: req.body.token,
 				plataforma: req.body.plataforma,
 			})

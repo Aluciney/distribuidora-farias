@@ -8,22 +8,25 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Building2, Wallet } from 'lucide-react-native';
+import { Mail, Wallet } from 'lucide-react-native';
 import { Button } from '@/components/Button';
 import { Card, CardBody } from '@/components/Card';
 import { FormField } from '@/components/FormField';
 import { Input } from '@/components/Input';
 import { EsqueciSenhaModal } from '@/features/auth/EsqueciSenhaModal';
-import { authService, SENHA_DEMO } from '@/features/auth/auth.service';
+import {
+  authService,
+  EMAIL_DEMO,
+  SENHA_DEMO,
+} from '@/features/auth/auth.service';
 import { useAuthStore } from '@/store/auth.store';
 import { toast } from '@/store/toast.store';
-import { apenasDigitos, maskCNPJ } from '@/lib/format';
 
 export default function LoginScreen() {
-  const loginCliente = useAuthStore((s) => s.loginCliente);
+  const loginUsuarioCliente = useAuthStore((s) => s.loginUsuarioCliente);
   const insets = useSafeAreaInsets();
 
-  const [cnpj, setCnpj] = useState('');
+  const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
@@ -31,8 +34,8 @@ export default function LoginScreen() {
 
   async function entrar() {
     setErro(null);
-    if (apenasDigitos(cnpj).length !== 14) {
-      setErro('CNPJ deve ter 14 dígitos.');
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      setErro('Informe um email válido.');
       return;
     }
     if (senha.length < 4) {
@@ -41,9 +44,9 @@ export default function LoginScreen() {
     }
     setCarregando(true);
     try {
-      const res = await authService.loginCliente({ cnpj, senha });
-      loginCliente(res.token, res.cliente);
-      toast.sucesso('Bem-vindo!', res.cliente.razaoSocial);
+      const res = await authService.loginCliente({ email, senha });
+      loginUsuarioCliente(res.token, res.usuarioCliente);
+      toast.sucesso('Bem-vindo!', res.usuarioCliente.nome);
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : 'Não foi possível entrar.';
@@ -51,6 +54,12 @@ export default function LoginScreen() {
     } finally {
       setCarregando(false);
     }
+  }
+
+  function preencherDemo() {
+    setEmail(EMAIL_DEMO);
+    setSenha(SENHA_DEMO);
+    setErro(null);
   }
 
   return (
@@ -86,23 +95,25 @@ export default function LoginScreen() {
             <CardBody className="gap-4">
               <View className="gap-1">
                 <View className="flex-row items-center gap-2">
-                  <Building2 size={16} color="#7dd3fc" />
+                  <Mail size={16} color="#7dd3fc" />
                   <Text className="text-base font-semibold text-slate-100">
                     Portal do Cliente
                   </Text>
                 </View>
                 <Text className="text-xs text-slate-400">
-                  Use o CNPJ cadastrado para acessar suas faturas.
+                  Use seu email cadastrado para acessar as faturas das suas
+                  filiais.
                 </Text>
               </View>
 
-              <FormField label="CNPJ" obrigatorio>
+              <FormField label="Email" obrigatorio>
                 <Input
-                  placeholder="00.000.000/0000-00"
-                  value={maskCNPJ(cnpj)}
-                  onChangeText={(v) => setCnpj(maskCNPJ(v))}
-                  keyboardType="numeric"
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
                   autoCapitalize="none"
+                  autoCorrect={false}
                 />
               </FormField>
 
@@ -140,12 +151,13 @@ export default function LoginScreen() {
                   Modo demonstração
                 </Text>
                 <Text className="mt-1 text-xs text-slate-400">
-                  Use{' '}
-                  <Text className="font-mono text-emerald-300">
-                    {SENHA_DEMO}
-                  </Text>{' '}
-                  como senha para qualquer cliente cadastrado nos mocks.
+                  Holding "Grupo Central" (rede com 2 filiais).
                 </Text>
+                <Pressable onPress={preencherDemo} className="mt-2 self-start">
+                  <Text className="text-xs text-emerald-300 active:text-emerald-200">
+                    Preencher credenciais demo
+                  </Text>
+                </Pressable>
               </View>
             </CardBody>
           </Card>
@@ -155,7 +167,7 @@ export default function LoginScreen() {
       <EsqueciSenhaModal
         aberto={esqueciAberto}
         onFechar={() => setEsqueciAberto(false)}
-        cnpjInicial={cnpj}
+        emailInicial={email}
       />
     </KeyboardAvoidingView>
   );

@@ -11,7 +11,7 @@ export const COOKIE_SESSAO = 'df_session'
 declare module 'fastify' {
 	interface FastifyInstance {
 		requerAdmin: (req: FastifyRequest, reply: FastifyReply) => Promise<void>
-		requerCliente: (req: FastifyRequest, reply: FastifyReply) => Promise<void>
+		requerUsuarioCliente: (req: FastifyRequest, reply: FastifyReply) => Promise<void>
 		requerSessao: (req: FastifyRequest, reply: FastifyReply) => Promise<void>
 		requerPerfilAdmin: (req: FastifyRequest, reply: FastifyReply) => Promise<void>
 		assinarSessao: (sessao: SessaoToken) => string
@@ -71,12 +71,12 @@ export const authPlugin = fp(async (app) => {
 		if (req.sessao.tipo !== 'ADMIN') throw new Proibido()
 	})
 
-	app.decorate('requerCliente', async (req: FastifyRequest) => {
+	app.decorate('requerUsuarioCliente', async (req: FastifyRequest) => {
 		await verificar(req)
-		if (req.sessao.tipo !== 'CLIENTE') throw new Proibido()
+		if (req.sessao.tipo !== 'USUARIO_CLIENTE') throw new Proibido()
 	})
 
-	/** Aceita qualquer sessão válida (ADMIN ou CLIENTE). */
+	/** Aceita qualquer sessão válida (ADMIN ou USUARIO_CLIENTE). */
 	app.decorate('requerSessao', async (req: FastifyRequest) => {
 		await verificar(req)
 	})

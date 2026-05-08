@@ -32,9 +32,7 @@ interface ListagemDTO {
 export const usuariosService = {
   async listar(filtros: FiltrosUsuarios = {}): Promise<ListagemUsuarios> {
     const perfil =
-      filtros.perfil && filtros.perfil !== 'TODOS' && filtros.perfil !== 'CLIENTE'
-        ? filtros.perfil
-        : undefined;
+      filtros.perfil && filtros.perfil !== 'TODOS' ? filtros.perfil : undefined;
     const ativo =
       filtros.ativo === undefined || filtros.ativo === 'TODOS'
         ? undefined
@@ -63,9 +61,6 @@ export const usuariosService = {
   },
 
   async criar(dados: DadosUsuario): Promise<Usuario> {
-    if (dados.perfil === 'CLIENTE') {
-      throw new Error('Perfil CLIENTE não pode ser criado pela tela de usuários internos.');
-    }
     const dto = await api.post<UsuarioDTO>('/admin/usuarios', {
       nome: dados.nome,
       email: dados.email.trim().toLowerCase(),
@@ -76,9 +71,6 @@ export const usuariosService = {
   },
 
   async atualizar(id: UUID, dados: DadosUsuario): Promise<Usuario> {
-    if (dados.perfil === 'CLIENTE') {
-      throw new Error('Perfil CLIENTE não é válido para usuários internos.');
-    }
     const dto = await api.put<UsuarioDTO>(`/admin/usuarios/${id}`, {
       nome: dados.nome,
       email: dados.email.trim().toLowerCase(),

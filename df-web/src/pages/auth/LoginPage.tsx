@@ -28,7 +28,7 @@ export function LoginPage() {
 
   // Já logado? Redireciona para a área correspondente.
   if (tipoSessao === 'ADMIN') return <Navigate to="/admin" replace />;
-  if (tipoSessao === 'CLIENTE') return <Navigate to="/cliente" replace />;
+  if (tipoSessao === 'USUARIO_CLIENTE') return <Navigate to="/cliente" replace />;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-8 text-slate-200">
@@ -50,7 +50,7 @@ export function LoginPage() {
           </p>
           <ul className="space-y-3 text-sm text-slate-400">
             <Feature texto="Boleto Febraban e PIX gerados juntos em toda cobrança" />
-            <Feature texto="Régua de cobrança automatizada por email, WhatsApp e SMS" />
+            <Feature texto="Régua de cobrança automatizada por email e WhatsApp" />
             <Feature texto="Portal do cliente com pagamento por cartão de crédito" />
             <Feature texto="Acompanhamento de inadimplência e fluxo de caixa em tempo real" />
           </ul>
@@ -93,7 +93,7 @@ export function LoginPage() {
             <p className="mt-1 text-xs text-slate-400">
               {aba === 'ADMIN'
                 ? 'Use o email corporativo cadastrado no sistema.'
-                : 'Use o CNPJ cadastrado para acessar suas faturas.'}
+                : 'Use seu email cadastrado para acessar as faturas das suas filiais.'}
             </p>
           </header>
 
@@ -125,7 +125,7 @@ export function LoginPage() {
       <EsqueciSenhaModal
         aberto={esqueciAberto}
         onFechar={() => setEsqueciAberto(false)}
-        tipoInicial={aba}
+        tipoInicial={aba === 'CLIENTE' ? 'USUARIO_CLIENTE' : 'ADMIN'}
       />
     </div>
   );

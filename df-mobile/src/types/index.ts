@@ -14,6 +14,13 @@ export const StatusFatura = {
 } as const;
 export type StatusFatura = (typeof StatusFatura)[keyof typeof StatusFatura];
 
+export const StatusCliente = {
+  ATIVO: 'ATIVO',
+  INATIVO: 'INATIVO',
+  BLOQUEADO: 'BLOQUEADO',
+} as const;
+export type StatusCliente = (typeof StatusCliente)[keyof typeof StatusCliente];
+
 export const MetodoPagamento = {
   BOLETO: 'BOLETO',
   PIX: 'PIX',
@@ -23,13 +30,26 @@ export const MetodoPagamento = {
 export type MetodoPagamento =
   (typeof MetodoPagamento)[keyof typeof MetodoPagamento];
 
-export interface ClienteSessao {
+/** Filial (loja) acessível pela holding logada. Vem do payload do login. */
+export interface FilialAcesso {
   id: UUID;
   cnpj: string;
   razaoSocial: string;
   nomeFantasia?: string;
+  status: StatusCliente;
+  /** Marca a filial-sede do grupo (informativo). */
+  principal: boolean;
+}
+
+/** UsuarioCliente (holding) — quem efetivamente faz login no portal. */
+export interface UsuarioClienteSessao {
+  id: UUID;
+  nome: string;
   email: string;
-  status: 'ATIVO' | 'INATIVO' | 'BLOQUEADO';
+  telefone: string;
+  ativo: boolean;
+  ultimoAcesso?: ISODateString;
+  filiais: FilialAcesso[];
 }
 
 export interface DadosBoleto {
@@ -61,13 +81,12 @@ export interface Fatura {
   numero: string;
   pedidoId: UUID;
   clienteId: UUID;
+  /** Resumo da filial à qual a fatura pertence. */
   cliente?: {
     id: UUID;
     cnpj: string;
     razaoSocial: string;
     nomeFantasia?: string;
-    email?: string;
-    telefone?: string;
   };
   valor: ValorEmCentavos;
   valorPago?: ValorEmCentavos;
@@ -98,4 +117,10 @@ export interface Notificacao {
   naoLida: boolean;
   faturaId?: UUID;
   criadoEm: ISODateString;
+  /** Filial à qual a notificação se refere. */
+  filial?: {
+    id: UUID;
+    razaoSocial: string;
+    nomeFantasia?: string;
+  };
 }

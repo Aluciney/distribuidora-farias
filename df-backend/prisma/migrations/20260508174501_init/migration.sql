@@ -20,7 +20,7 @@ CREATE TYPE "MetodoPagamento" AS ENUM ('BOLETO', 'PIX', 'CARTAO_CREDITO', 'DINHE
 CREATE TYPE "GatilhoRegua" AS ENUM ('ANTES_VENCIMENTO', 'DIA_VENCIMENTO', 'APOS_VENCIMENTO');
 
 -- CreateEnum
-CREATE TYPE "CanalNotificacao" AS ENUM ('EMAIL', 'WHATSAPP', 'SMS');
+CREATE TYPE "CanalNotificacao" AS ENUM ('EMAIL', 'WHATSAPP');
 
 -- CreateEnum
 CREATE TYPE "TipoChavePix" AS ENUM ('CPF', 'CNPJ', 'EMAIL', 'TELEFONE', 'ALEATORIA');
@@ -47,13 +47,9 @@ CREATE TABLE "clientes" (
     "razao_social" TEXT NOT NULL,
     "nome_fantasia" TEXT,
     "inscricao_estadual" TEXT,
-    "email" TEXT NOT NULL,
-    "telefone" TEXT NOT NULL,
     "status" "StatusCliente" NOT NULL DEFAULT 'ATIVO',
     "limite_credito" INTEGER NOT NULL DEFAULT 0,
     "observacoes" TEXT,
-    "senha_hash" TEXT,
-    "ultimo_acesso" TIMESTAMP(3),
     "endereco_cep" TEXT NOT NULL,
     "endereco_logradouro" TEXT NOT NULL,
     "endereco_numero" TEXT NOT NULL,
@@ -65,6 +61,57 @@ CREATE TABLE "clientes" (
     "atualizado_em" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "clientes_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "usuarios_cliente" (
+    "id" TEXT NOT NULL,
+    "nome" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "telefone" TEXT NOT NULL,
+    "senha_hash" TEXT,
+    "ativo" BOOLEAN NOT NULL DEFAULT true,
+    "ultimo_acesso" TIMESTAMP(3),
+    "criado_em" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "atualizado_em" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "usuarios_cliente_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "usuarios_cliente_acessos" (
+    "id" TEXT NOT NULL,
+    "usuario_cliente_id" TEXT NOT NULL,
+    "cliente_id" TEXT NOT NULL,
+    "principal" BOOLEAN NOT NULL DEFAULT false,
+    "criado_em" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "usuarios_cliente_acessos_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "dispositivos_push" (
+    "id" TEXT NOT NULL,
+    "usuario_cliente_id" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "plataforma" TEXT,
+    "ultimo_uso" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "criado_em" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "dispositivos_push_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "codigos_recuperacao_senha" (
+    "id" TEXT NOT NULL,
+    "tipo" TEXT NOT NULL,
+    "entidade_id" TEXT NOT NULL,
+    "codigo_hash" TEXT NOT NULL,
+    "expira_em" TIMESTAMP(3) NOT NULL,
+    "usado_em" TIMESTAMP(3),
+    "criado_em" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "codigos_recuperacao_senha_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -174,6 +221,7 @@ CREATE TABLE "acoes_regua" (
 CREATE TABLE "notificacoes" (
     "id" TEXT NOT NULL,
     "cliente_id" TEXT NOT NULL,
+    "usuario_cliente_id" TEXT,
     "fatura_id" TEXT,
     "regra_id" TEXT,
     "canal" "CanalNotificacao",
@@ -216,6 +264,7 @@ CREATE TABLE "configuracoes_cobranca" (
     "encargos_desconto_antecipado_dias" INTEGER NOT NULL DEFAULT 0,
     "encargos_desconto_percentual" DECIMAL(5,2) NOT NULL DEFAULT 0,
     "encargos_mensagem_padrao" TEXT,
+    "whatsapp_mensagem_boleto" TEXT,
     "atualizado_em" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "configuracoes_cobranca_pkey" PRIMARY KEY ("id")
@@ -235,6 +284,27 @@ CREATE INDEX "clientes_cnpj_idx" ON "clientes"("cnpj");
 
 -- CreateIndex
 CREATE INDEX "clientes_status_idx" ON "clientes"("status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "usuarios_cliente_email_key" ON "usuarios_cliente"("email");
+
+-- CreateIndex
+CREATE INDEX "usuarios_cliente_email_idx" ON "usuarios_cliente"("email");
+
+-- CreateIndex
+CREATE INDEX "usuarios_cliente_acessos_cliente_id_idx" ON "usuarios_cliente_acessos"("cliente_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "usuarios_cliente_acessos_usuario_cliente_id_cliente_id_key" ON "usuarios_cliente_acessos"("usuario_cliente_id", "cliente_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "dispositivos_push_token_key" ON "dispositivos_push"("token");
+
+-- CreateIndex
+CREATE INDEX "dispositivos_push_usuario_cliente_id_idx" ON "dispositivos_push"("usuario_cliente_id");
+
+-- CreateIndex
+CREATE INDEX "codigos_recuperacao_senha_tipo_entidade_id_idx" ON "codigos_recuperacao_senha"("tipo", "entidade_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "pedidos_numero_key" ON "pedidos"("numero");
@@ -282,10 +352,22 @@ CREATE INDEX "acoes_regua_regra_id_idx" ON "acoes_regua"("regra_id");
 CREATE INDEX "notificacoes_cliente_id_idx" ON "notificacoes"("cliente_id");
 
 -- CreateIndex
+CREATE INDEX "notificacoes_usuario_cliente_id_idx" ON "notificacoes"("usuario_cliente_id");
+
+-- CreateIndex
 CREATE INDEX "notificacoes_fatura_id_idx" ON "notificacoes"("fatura_id");
 
 -- CreateIndex
 CREATE INDEX "notificacoes_lida_em_idx" ON "notificacoes"("lida_em");
+
+-- AddForeignKey
+ALTER TABLE "usuarios_cliente_acessos" ADD CONSTRAINT "usuarios_cliente_acessos_usuario_cliente_id_fkey" FOREIGN KEY ("usuario_cliente_id") REFERENCES "usuarios_cliente"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "usuarios_cliente_acessos" ADD CONSTRAINT "usuarios_cliente_acessos_cliente_id_fkey" FOREIGN KEY ("cliente_id") REFERENCES "clientes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "dispositivos_push" ADD CONSTRAINT "dispositivos_push_usuario_cliente_id_fkey" FOREIGN KEY ("usuario_cliente_id") REFERENCES "usuarios_cliente"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "pedidos" ADD CONSTRAINT "pedidos_cliente_id_fkey" FOREIGN KEY ("cliente_id") REFERENCES "clientes"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -307,6 +389,9 @@ ALTER TABLE "acoes_regua" ADD CONSTRAINT "acoes_regua_regra_id_fkey" FOREIGN KEY
 
 -- AddForeignKey
 ALTER TABLE "notificacoes" ADD CONSTRAINT "notificacoes_cliente_id_fkey" FOREIGN KEY ("cliente_id") REFERENCES "clientes"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "notificacoes" ADD CONSTRAINT "notificacoes_usuario_cliente_id_fkey" FOREIGN KEY ("usuario_cliente_id") REFERENCES "usuarios_cliente"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "notificacoes" ADD CONSTRAINT "notificacoes_fatura_id_fkey" FOREIGN KEY ("fatura_id") REFERENCES "faturas"("id") ON DELETE SET NULL ON UPDATE CASCADE;

@@ -47,8 +47,6 @@ export async function gerarBoletoPdf(input: GerarPdfInput): Promise<Buffer> {
 
 		bloco(doc, 'Sacado / Cliente', cliente.razaoSocial)
 		bloco(doc, 'CNPJ', formatarCnpj(cliente.cnpj))
-		if (cliente.email) bloco(doc, 'Email', cliente.email)
-		if (cliente.telefone) bloco(doc, 'Telefone', cliente.telefone)
 
 		desenharLinha(doc)
 

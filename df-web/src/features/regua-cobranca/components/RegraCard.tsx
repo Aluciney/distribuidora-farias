@@ -4,7 +4,6 @@ import {
   Mail,
   MessageCircle,
   Pencil,
-  Smartphone,
   Trash2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
@@ -25,13 +24,11 @@ interface RegraCardProps {
 const CANAL_ICONE = {
   [CanalNotificacao.EMAIL]: Mail,
   [CanalNotificacao.WHATSAPP]: MessageCircle,
-  [CanalNotificacao.SMS]: Smartphone,
 } as const;
 
 const CANAL_LABEL = {
   [CanalNotificacao.EMAIL]: 'Email',
   [CanalNotificacao.WHATSAPP]: 'WhatsApp',
-  [CanalNotificacao.SMS]: 'SMS',
 } as const;
 
 const GATILHO_TOM: Record<GatilhoRegua, 'sky' | 'emerald' | 'rose'> = {

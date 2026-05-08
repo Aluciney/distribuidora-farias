@@ -29,14 +29,6 @@ export const clienteSchema = z.object({
   razaoSocial: z.string().min(3, 'Razão social deve ter ao menos 3 caracteres.'),
   nomeFantasia: z.string().optional().or(z.literal('')),
   inscricaoEstadual: z.string().optional().or(z.literal('')),
-  email: z.email('Informe um email válido.'),
-  telefone: z
-    .string()
-    .transform((v) => apenasDigitos(v))
-    .refine(
-      (v) => v.length === 10 || v.length === 11,
-      'Telefone deve ter 10 ou 11 dígitos (com DDD).',
-    ),
   endereco: enderecoSchema,
   status: z.enum([
     StatusCliente.ATIVO,

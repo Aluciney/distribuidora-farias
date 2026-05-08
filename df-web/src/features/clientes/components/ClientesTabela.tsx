@@ -3,14 +3,11 @@ import {
   PowerOff,
   CheckCircle2,
   Lock,
-  Mail,
-  Phone,
 } from 'lucide-react';
 import type { Cliente } from '@/types';
 import { StatusCliente } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 import { formatCNPJ, formatCurrency, formatDate } from '@/utils/format';
-import { maskTelefone } from '@/utils/cnpj';
 import { cn } from '@/lib/cn';
 
 interface ClientesTabelaProps {
@@ -43,9 +40,8 @@ export function ClientesTabela({
         <table className="w-full min-w-[760px] text-left text-sm">
           <thead className="text-xs uppercase tracking-wider text-slate-500">
             <tr>
-              <th className="px-4 py-3 font-medium">Cliente</th>
+              <th className="px-4 py-3 font-medium">Filial</th>
               <th className="px-4 py-3 font-medium">CNPJ</th>
-              <th className="px-4 py-3 font-medium">Contato</th>
               <th className="px-4 py-3 font-medium">Cidade/UF</th>
               <th className="px-4 py-3 text-right font-medium">Limite</th>
               <th className="px-4 py-3 font-medium">Atualizado</th>
@@ -75,16 +71,6 @@ export function ClientesTabela({
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-300">
                     {formatCNPJ(cliente.cnpj)}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-slate-400">
-                    <div className="flex items-center gap-1.5">
-                      <Mail className="h-3 w-3" />
-                      {cliente.email}
-                    </div>
-                    <div className="mt-0.5 flex items-center gap-1.5">
-                      <Phone className="h-3 w-3" />
-                      {maskTelefone(cliente.telefone)}
-                    </div>
                   </td>
                   <td className="px-4 py-3 text-slate-400">
                     {cliente.endereco.cidade}/{cliente.endereco.uf}

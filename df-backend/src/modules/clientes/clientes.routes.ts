@@ -19,8 +19,6 @@ export function serializarCliente(c: Cliente) {
 		razaoSocial: c.razaoSocial,
 		nomeFantasia: c.nomeFantasia,
 		inscricaoEstadual: c.inscricaoEstadual,
-		email: c.email,
-		telefone: c.telefone,
 		status: c.status,
 		limiteCredito: c.limiteCredito,
 		observacoes: c.observacoes,

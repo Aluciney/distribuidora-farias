@@ -15,6 +15,7 @@ import type {
   RegraCobranca,
   StatusFatura,
   Usuario,
+  UsuarioCliente,
 } from '@/types';
 
 const undef = <T,>(v: T | null | undefined): T | undefined => (v == null ? undefined : v);
@@ -56,8 +57,6 @@ export interface ClienteDTO {
   razaoSocial: string;
   nomeFantasia: string | null;
   inscricaoEstadual: string | null;
-  email: string;
-  telefone: string;
   status: 'ATIVO' | 'INATIVO' | 'BLOQUEADO';
   limiteCredito: number;
   observacoes: string | null;
@@ -81,8 +80,6 @@ export function fromClienteDTO(dto: ClienteDTO): Cliente {
     razaoSocial: dto.razaoSocial,
     nomeFantasia: undef(dto.nomeFantasia),
     inscricaoEstadual: undef(dto.inscricaoEstadual),
-    email: dto.email,
-    telefone: dto.telefone,
     status: dto.status,
     limiteCredito: dto.limiteCredito,
     observacoes: undef(dto.observacoes),
@@ -97,6 +94,51 @@ export function fromClienteDTO(dto: ClienteDTO): Cliente {
     },
     criadoEm: dto.criadoEm,
     atualizadoEm: dto.atualizadoEm,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// UsuarioCliente (holding)
+// ---------------------------------------------------------------------------
+
+export interface UsuarioClienteDTO {
+  id: string;
+  nome: string;
+  email: string;
+  telefone: string;
+  ativo: boolean;
+  senhaDefinida?: boolean;
+  ultimoAcesso: string | null;
+  criadoEm?: string;
+  filiais: {
+    id: string;
+    cnpj: string;
+    razaoSocial: string;
+    nomeFantasia: string | null;
+    status: 'ATIVO' | 'INATIVO' | 'BLOQUEADO';
+    principal: boolean;
+    /** Presente nos endpoints admin (POST/GET de UsuarioCliente). */
+    vinculadoEm?: string;
+  }[];
+}
+
+export function fromUsuarioClienteDTO(dto: UsuarioClienteDTO): UsuarioCliente {
+  return {
+    id: dto.id,
+    nome: dto.nome,
+    email: dto.email,
+    telefone: dto.telefone,
+    ativo: dto.ativo,
+    senhaDefinida: dto.senhaDefinida,
+    ultimoAcesso: undef(dto.ultimoAcesso),
+    filiais: dto.filiais.map((f) => ({
+      id: f.id,
+      cnpj: f.cnpj,
+      razaoSocial: f.razaoSocial,
+      nomeFantasia: f.nomeFantasia ?? undefined,
+      status: f.status,
+      principal: f.principal,
+    })),
   };
 }
 
@@ -191,8 +233,6 @@ export interface FaturaDTO {
     cnpj: string;
     razaoSocial: string;
     nomeFantasia?: string | null;
-    email?: string;
-    telefone?: string;
   } | null;
   valor: number;
   valorPago: number | null;
@@ -259,8 +299,6 @@ export function fromFaturaDTO(dto: FaturaDTO): Fatura {
           cnpj: dto.cliente.cnpj,
           razaoSocial: dto.cliente.razaoSocial,
           nomeFantasia: dto.cliente.nomeFantasia ?? undefined,
-          email: dto.cliente.email,
-          telefone: dto.cliente.telefone,
         }
       : undefined,
     valor: dto.valor,
@@ -294,7 +332,7 @@ export interface RegraDTO {
   diasOffset: number;
   acoes: {
     id: string;
-    canal: 'EMAIL' | 'WHATSAPP' | 'SMS';
+    canal: 'EMAIL' | 'WHATSAPP';
     assunto: string | null;
     mensagem: string;
   }[];
@@ -327,15 +365,21 @@ export function fromRegraDTO(dto: RegraDTO): RegraCobranca {
 export interface NotificacaoDTO {
   id: string;
   clienteId: string;
+  usuarioClienteId?: string | null;
   faturaId: string | null;
   regraId: string | null;
-  canal: 'EMAIL' | 'WHATSAPP' | 'SMS' | null;
+  canal: 'EMAIL' | 'WHATSAPP' | null;
   titulo: string;
   mensagem: string;
   enviadaEm: string | null;
   lidaEm: string | null;
   erro: string | null;
   criadoEm: string;
+  filial?: {
+    id: string;
+    razaoSocial: string;
+    nomeFantasia: string | null;
+  } | null;
 }
 
 export function fromNotificacaoDTO(dto: NotificacaoDTO): Notificacao {
@@ -346,5 +390,12 @@ export function fromNotificacaoDTO(dto: NotificacaoDTO): Notificacao {
     naoLida: dto.lidaEm == null,
     faturaId: undef(dto.faturaId),
     criadoEm: dto.enviadaEm ?? dto.criadoEm,
+    filial: dto.filial
+      ? {
+          id: dto.filial.id,
+          razaoSocial: dto.filial.razaoSocial,
+          nomeFantasia: dto.filial.nomeFantasia ?? undefined,
+        }
+      : undefined,
   };
 }

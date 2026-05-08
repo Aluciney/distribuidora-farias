@@ -2,18 +2,27 @@ import { useEffect } from 'react';
 import { Redirect, Tabs } from 'expo-router';
 import { Bell, FileText, Home, UserCircle } from 'lucide-react-native';
 import { useNotificacoes } from '@/features/notificacoes/useNotificacoes';
+import { authService } from '@/features/auth/auth.service';
 import { useAuthStore } from '@/store/auth.store';
 import { registrarPushTokenNoBackend } from '@/services/push';
 
 export default function ClienteLayout() {
   const token = useAuthStore((s) => s.token);
   const hidratado = useAuthStore((s) => s.hidratado);
+  const setUsuarioCliente = useAuthStore((s) => s.setUsuarioCliente);
 
   useEffect(() => {
-    if (token) {
-      void registrarPushTokenNoBackend();
-    }
-  }, [token]);
+    if (!token) return;
+    void registrarPushTokenNoBackend();
+    // Re-sincroniza filiais com o backend toda vez que o app recarrega.
+    // Admin pode ter vinculado/desvinculado filiais desde o último login.
+    void authService
+      .eu()
+      .then((u) => {
+        if (u) setUsuarioCliente(u);
+      })
+      .catch(() => undefined);
+  }, [token, setUsuarioCliente]);
 
   if (!hidratado) return null;
   if (!token) return <Redirect href="/(auth)/login" />;

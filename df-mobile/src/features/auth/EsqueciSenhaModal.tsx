@@ -7,23 +7,23 @@ import { FormField } from '@/components/FormField';
 import { Input } from '@/components/Input';
 import { authService } from '@/features/auth/auth.service';
 import { toast } from '@/store/toast.store';
-import { apenasDigitos, maskCNPJ } from '@/lib/format';
+import { apenasDigitos } from '@/lib/format';
 
 type Etapa = 'solicitar' | 'redefinir';
 
 interface EsqueciSenhaModalProps {
   aberto: boolean;
   onFechar: () => void;
-  cnpjInicial?: string;
+  emailInicial?: string;
 }
 
 export function EsqueciSenhaModal({
   aberto,
   onFechar,
-  cnpjInicial = '',
+  emailInicial = '',
 }: EsqueciSenhaModalProps) {
   const [etapa, setEtapa] = useState<Etapa>('solicitar');
-  const [cnpj, setCnpj] = useState(cnpjInicial);
+  const [email, setEmail] = useState(emailInicial);
   const [destinatario, setDestinatario] = useState<string | null>(null);
   const [codigo, setCodigo] = useState('');
   const [senhaNova, setSenhaNova] = useState('');
@@ -34,7 +34,7 @@ export function EsqueciSenhaModal({
   useEffect(() => {
     if (aberto) {
       setEtapa('solicitar');
-      setCnpj(cnpjInicial);
+      setEmail(emailInicial);
       setDestinatario(null);
       setCodigo('');
       setSenhaNova('');
@@ -42,17 +42,17 @@ export function EsqueciSenhaModal({
       setErro(null);
       setCarregando(false);
     }
-  }, [aberto, cnpjInicial]);
+  }, [aberto, emailInicial]);
 
   async function solicitar() {
     setErro(null);
-    if (apenasDigitos(cnpj).length !== 14) {
-      setErro('Informe um CNPJ válido (14 dígitos).');
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      setErro('Informe um email válido.');
       return;
     }
     setCarregando(true);
     try {
-      const res = await authService.esqueciSenha({ cnpj });
+      const res = await authService.esqueciSenha({ email });
       setDestinatario(res.destinatario);
       setEtapa('redefinir');
     } catch (err) {
@@ -83,7 +83,7 @@ export function EsqueciSenhaModal({
     }
     setCarregando(true);
     try {
-      await authService.redefinirSenha({ cnpj, codigo, senhaNova });
+      await authService.redefinirSenha({ email, codigo, senhaNova });
       toast.sucesso(
         'Senha redefinida',
         'Você já pode entrar com a nova senha.',
@@ -155,13 +155,14 @@ export function EsqueciSenhaModal({
       }
     >
       {etapa === 'solicitar' ? (
-        <FormField label="CNPJ" obrigatorio erro={erro ?? undefined}>
+        <FormField label="Email" obrigatorio erro={erro ?? undefined}>
           <Input
-            value={maskCNPJ(cnpj)}
-            onChangeText={(v) => setCnpj(maskCNPJ(v))}
-            placeholder="00.000.000/0000-00"
-            keyboardType="numeric"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="seu@email.com"
+            keyboardType="email-address"
             autoCapitalize="none"
+            autoCorrect={false}
             invalido={Boolean(erro)}
           />
         </FormField>

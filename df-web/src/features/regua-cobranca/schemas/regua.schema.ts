@@ -3,11 +3,7 @@ import { CanalNotificacao, GatilhoRegua } from '@/types';
 
 const acaoSchema = z
   .object({
-    canal: z.enum([
-      CanalNotificacao.EMAIL,
-      CanalNotificacao.WHATSAPP,
-      CanalNotificacao.SMS,
-    ]),
+    canal: z.enum([CanalNotificacao.EMAIL, CanalNotificacao.WHATSAPP]),
     assunto: z.string().max(150).optional().or(z.literal('')),
     mensagem: z
       .string()

@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import {
   Pressable,
   RefreshControl,
@@ -11,8 +10,10 @@ import { useRouter } from 'expo-router';
 import {
   AlertCircle,
   ArrowRight,
+  Building2,
   CalendarClock,
   CheckCircle2,
+  Layers,
   LogOut,
   TrendingUp,
   Wallet,
@@ -20,62 +21,31 @@ import {
 import { Card, CardBody } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
-import { useFaturas } from '@/features/faturas/useFaturas';
+import { useDashboardCliente } from '@/features/dashboard/useDashboard';
+import { BotaoSeletorFilial } from '@/features/portal/BotaoSeletorFilial';
 import { useAuthStore } from '@/store/auth.store';
-import { StatusFatura, type Fatura } from '@/types';
+import { StatusFatura } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/format';
-
-interface ResumoCliente {
-  totalGasto: number;
-  totalEmAberto: number;
-  totalVencido: number;
-  qtdAberto: number;
-  proximas: Fatura[];
-}
-
-function calcularResumo(faturas: Fatura[]): ResumoCliente {
-  let totalGasto = 0;
-  let totalEmAberto = 0;
-  let totalVencido = 0;
-  let qtdAberto = 0;
-  for (const f of faturas) {
-    if (f.status === StatusFatura.PAGO) totalGasto += f.valorPago ?? f.valor;
-    if (f.status === StatusFatura.PENDENTE) {
-      totalEmAberto += f.valor;
-      qtdAberto += 1;
-    }
-    if (f.status === StatusFatura.VENCIDO) {
-      totalVencido += f.valor;
-      qtdAberto += 1;
-    }
-  }
-  const proximas = faturas
-    .filter(
-      (f) =>
-        f.status === StatusFatura.PENDENTE ||
-        f.status === StatusFatura.VENCIDO,
-    )
-    .sort((a, b) =>
-      a.dataVencimento < b.dataVencimento
-        ? -1
-        : a.dataVencimento > b.dataVencimento
-          ? 1
-          : 0,
-    )
-    .slice(0, 4);
-  return { totalGasto, totalEmAberto, totalVencido, qtdAberto, proximas };
-}
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const cliente = useAuthStore((s) => s.cliente);
+  const usuario = useAuthStore((s) => s.usuarioCliente);
+  const filialSelecionadaId = useAuthStore((s) => s.filialSelecionadaId);
+  const filialAtiva = filialSelecionadaId
+    ? usuario?.filiais.find((f) => f.id === filialSelecionadaId)
+    : null;
   const logout = useAuthStore((s) => s.logout);
 
-  const { data, isLoading, isError, refetch, isRefetching } = useFaturas({
-    porPagina: 100,
-  });
-  const resumo = useMemo(() => calcularResumo(data?.itens ?? []), [data]);
+  const { data, isLoading, isError, refetch, isRefetching } =
+    useDashboardCliente();
+
+  const totalGasto = data?.totalGasto ?? 0;
+  const totalEmAberto = data?.totalEmAberto ?? 0;
+  const totalVencido = data?.totalVencido ?? 0;
+  const qtdAberto = data?.qtdFaturasEmAberto ?? 0;
+  const proximas = data?.proximas ?? [];
+  const totalFiliais = usuario?.filiais.length ?? 0;
 
   return (
     <ScrollView
@@ -100,11 +70,25 @@ export default function DashboardScreen() {
             Bem-vindo de volta
           </Text>
           <Text className="mt-1 text-2xl font-semibold text-slate-100">
-            {cliente?.razaoSocial ?? 'Carregando...'}
+            {usuario?.nome ?? 'Carregando...'}
           </Text>
-          <Text className="mt-1 text-xs text-slate-400">
-            Acompanhe seus pagamentos e quite faturas em segundos.
-          </Text>
+          <View className="mt-1 flex-row items-center gap-1.5">
+            {filialAtiva ? (
+              <>
+                <Building2 size={12} color="#7dd3fc" />
+                <Text className="text-xs text-slate-400">
+                  {filialAtiva.nomeFantasia ?? filialAtiva.razaoSocial}
+                </Text>
+              </>
+            ) : (
+              <>
+                <Layers size={12} color="#34d399" />
+                <Text className="text-xs text-slate-400">
+                  Visão consolidada de {totalFiliais} filial(is)
+                </Text>
+              </>
+            )}
+          </View>
         </View>
         <Pressable
           onPress={logout}
@@ -113,6 +97,13 @@ export default function DashboardScreen() {
         >
           <LogOut size={18} color="#94a3b8" />
         </Pressable>
+      </View>
+
+      <View className="flex-row items-center justify-between">
+        <Text className="text-xs uppercase tracking-wider text-slate-500">
+          Filtro
+        </Text>
+        <BotaoSeletorFilial />
       </View>
 
       {isError && (
@@ -129,7 +120,7 @@ export default function DashboardScreen() {
       <View className="gap-3">
         <Kpi
           titulo="Total gasto"
-          valor={formatCurrency(resumo.totalGasto)}
+          valor={formatCurrency(totalGasto)}
           legenda="Faturas pagas"
           icone={<Wallet size={18} color="#34d399" />}
           tom="emerald"
@@ -137,7 +128,7 @@ export default function DashboardScreen() {
         />
         <Kpi
           titulo="Em aberto"
-          valor={formatCurrency(resumo.totalEmAberto)}
+          valor={formatCurrency(totalEmAberto)}
           legenda="Aguardando pagamento"
           icone={<TrendingUp size={18} color="#7dd3fc" />}
           tom="sky"
@@ -145,7 +136,7 @@ export default function DashboardScreen() {
         />
         <Kpi
           titulo="Vencidas"
-          valor={formatCurrency(resumo.totalVencido)}
+          valor={formatCurrency(totalVencido)}
           legenda="Regularize quanto antes"
           icone={<AlertCircle size={18} color="#fda4af" />}
           tom="rose"
@@ -153,7 +144,7 @@ export default function DashboardScreen() {
         />
         <Kpi
           titulo="Faturas em aberto"
-          valor={String(resumo.qtdAberto)}
+          valor={String(qtdAberto)}
           legenda="Pendentes + vencidas"
           icone={<CalendarClock size={18} color="#fcd34d" />}
           tom="amber"
@@ -190,7 +181,7 @@ export default function DashboardScreen() {
                 />
               ))}
             </View>
-          ) : resumo.proximas.length === 0 ? (
+          ) : proximas.length === 0 ? (
             <View className="items-center gap-2 py-8">
               <CheckCircle2 size={32} color="#34d399" />
               <Text className="text-sm font-medium text-slate-200">
@@ -202,7 +193,7 @@ export default function DashboardScreen() {
             </View>
           ) : (
             <View className="gap-2">
-              {resumo.proximas.map((f) => (
+              {proximas.map((f) => (
                 <Pressable
                   key={f.id}
                   onPress={() => router.push(`/(cliente)/faturas/${f.id}`)}
@@ -223,6 +214,17 @@ export default function DashboardScreen() {
                           : 'PENDENTE'}
                       </Badge>
                     </View>
+                    {!filialAtiva && (
+                      <View className="flex-row items-center gap-1">
+                        <Building2 size={10} color="#7dd3fc" />
+                        <Text
+                          className="text-[11px] text-slate-400"
+                          numberOfLines={1}
+                        >
+                          {f.filial.nomeFantasia ?? f.filial.razaoSocial}
+                        </Text>
+                      </View>
+                    )}
                     <Text className="text-sm text-slate-200">
                       Vence em {formatDate(f.dataVencimento)}
                     </Text>

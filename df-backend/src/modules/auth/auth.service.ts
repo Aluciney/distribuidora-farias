@@ -1,7 +1,6 @@
 import { randomInt } from 'node:crypto'
 import type { PrismaClient } from '@prisma/client'
 import { NaoAutorizado, Proibido, RegraNegocio } from '../../shared/erros'
-import { apenasDigitosCnpj } from '../../shared/utils/cnpj'
 import { hashearSenha, validarSenha } from '../../shared/utils/senha'
 import type { ICanalNotificacao } from '../notificacoes/canais/canal.interface'
 import { EmailCanalLog, EmailCanalSmtp } from '../notificacoes/canais/email.canal'
@@ -9,7 +8,7 @@ import { EmailCanalLog, EmailCanalSmtp } from '../notificacoes/canais/email.cana
 const VALIDADE_CODIGO_MINUTOS = 15
 const SENHA_MINIMO = 6
 
-export type TipoEntidade = 'ADMIN' | 'CLIENTE'
+export type TipoEntidade = 'ADMIN' | 'USUARIO_CLIENTE'
 
 interface AlterarSenhaInput {
 	tipo: TipoEntidade
@@ -20,13 +19,13 @@ interface AlterarSenhaInput {
 
 interface SolicitarRecuperacaoInput {
 	tipo: TipoEntidade
-	/** Email para ADMIN, CNPJ para CLIENTE. */
-	identificador: string
+	/** Email cadastrado (mesma estrutura para ADMIN e USUARIO_CLIENTE). */
+	email: string
 }
 
 interface RedefinirSenhaInput {
 	tipo: TipoEntidade
-	identificador: string
+	email: string
 	codigo: string
 	senhaNova: string
 }
@@ -48,37 +47,27 @@ export class AuthService {
 		return usuario
 	}
 
-	async loginCliente(cnpj: string, senha: string) {
-		const cnpjDigitos = apenasDigitosCnpj(cnpj)
-		const cliente = await this.prisma.cliente.findUnique({ where: { cnpj: cnpjDigitos } })
-		if (!cliente || !cliente.senhaHash || !(await validarSenha(senha, cliente.senhaHash))) {
-			throw new NaoAutorizado('CREDENCIAIS_INVALIDAS', 'CNPJ ou senha incorretos.')
-		}
-		if (cliente.status === 'INATIVO') throw new Proibido('CLIENTE_INATIVO', 'Cliente inativo.')
-		if (cliente.status === 'BLOQUEADO') throw new Proibido('CLIENTE_BLOQUEADO', 'Cliente bloqueado.')
-		await this.prisma.cliente.update({ where: { id: cliente.id }, data: { ultimoAcesso: new Date() } })
-		return cliente
-	}
-
-	async definirSenhaCliente(cnpj: string, senha: string) {
-		const cnpjDigitos = apenasDigitosCnpj(cnpj)
-		const cliente = await this.prisma.cliente.findUnique({ where: { cnpj: cnpjDigitos } })
-		if (!cliente) throw new RegraNegocio('CLIENTE_NAO_ENCONTRADO', 'Cliente não encontrado.')
-		if (cliente.senhaHash) {
-			throw new RegraNegocio('SENHA_JA_DEFINIDA', 'Cliente já possui senha cadastrada. Use a tela de recuperação.')
-		}
-		await this.prisma.cliente.update({
-			where: { id: cliente.id },
-			data: { senhaHash: await hashearSenha(senha) },
+	async loginUsuarioCliente(email: string, senha: string) {
+		const usuario = await this.prisma.usuarioCliente.findUnique({
+			where: { email: email.toLowerCase() },
 		})
+		if (!usuario || !usuario.senhaHash || !(await validarSenha(senha, usuario.senhaHash))) {
+			throw new NaoAutorizado('CREDENCIAIS_INVALIDAS', 'Email ou senha incorretos.')
+		}
+		if (!usuario.ativo) throw new Proibido('USUARIO_INATIVO', 'Usuário inativo.')
+		await this.prisma.usuarioCliente.update({
+			where: { id: usuario.id },
+			data: { ultimoAcesso: new Date() },
+		})
+		return usuario
 	}
 
 	async obterUsuario(id: string) {
 		return this.prisma.usuario.findUnique({ where: { id } })
 	}
 
-	async obterCliente(id: string) {
-		return this.prisma.cliente.findUnique({ where: { id } })
+	async obterUsuarioCliente(id: string) {
+		return this.prisma.usuarioCliente.findUnique({ where: { id } })
 	}
 
 	// -------------------------------------------------------------------------
@@ -104,13 +93,15 @@ export class AuthService {
 			return
 		}
 
-		const cliente = await this.prisma.cliente.findUnique({ where: { id: input.entidadeId } })
-		if (!cliente) throw new NaoAutorizado()
-		if (!cliente.senhaHash || !(await validarSenha(input.senhaAtual, cliente.senhaHash))) {
+		const usuarioCliente = await this.prisma.usuarioCliente.findUnique({
+			where: { id: input.entidadeId },
+		})
+		if (!usuarioCliente) throw new NaoAutorizado()
+		if (!usuarioCliente.senhaHash || !(await validarSenha(input.senhaAtual, usuarioCliente.senhaHash))) {
 			throw new NaoAutorizado('SENHA_ATUAL_INVALIDA', 'Senha atual incorreta.')
 		}
-		await this.prisma.cliente.update({
-			where: { id: cliente.id },
+		await this.prisma.usuarioCliente.update({
+			where: { id: usuarioCliente.id },
 			data: { senhaHash: await hashearSenha(input.senhaNova) },
 		})
 	}
@@ -121,21 +112,59 @@ export class AuthService {
 
 	/**
 	 * Sempre retorna sucesso ainda que a entidade não exista — evita que um
-	 * atacante enumere emails/CNPJs cadastrados pela diferença de resposta.
+	 * atacante enumere emails cadastrados pela diferença de resposta.
 	 */
 	async solicitarRecuperacaoSenha(
 		input: SolicitarRecuperacaoInput,
 	): Promise<{ destinatario: string | null }> {
-		const alvo = await this.localizarEntidade(input.tipo, input.identificador)
+		const alvo = await this.localizarEntidade(input.tipo, input.email)
 		if (!alvo) return { destinatario: null }
+		await this.gerarCodigoEEnviar({
+			tipo: input.tipo,
+			entidadeId: alvo.id,
+			destinatario: alvo.email,
+			assunto: 'Recuperação de senha — DF Distribuidora',
+			mensagem: (codigo) => montarEmailRecuperacao(codigo, alvo.nome),
+		})
+		return { destinatario: mascararEmail(alvo.email) }
+	}
 
+	/**
+	 * Envia código de boas-vindas para um UsuarioCliente recém-criado pelo
+	 * admin definir a senha pela primeira vez. Mesmo mecanismo de código da
+	 * recuperação — só muda o texto do email. O cliente usa `redefinirSenha`
+	 * com o código recebido.
+	 */
+	async enviarConviteSenhaInicial(usuarioClienteId: string): Promise<{ destinatario: string }> {
+		const usuario = await this.prisma.usuarioCliente.findUnique({
+			where: { id: usuarioClienteId },
+		})
+		if (!usuario) {
+			throw new RegraNegocio('USUARIO_NAO_ENCONTRADO', 'Usuário cliente não encontrado.')
+		}
+		if (!usuario.ativo) {
+			throw new RegraNegocio('USUARIO_INATIVO', 'Usuário inativo — reative antes de enviar convite.')
+		}
+		await this.gerarCodigoEEnviar({
+			tipo: 'USUARIO_CLIENTE',
+			entidadeId: usuario.id,
+			destinatario: usuario.email,
+			assunto: 'Bem-vindo ao Portal DF — defina sua senha',
+			mensagem: (codigo) => montarEmailConvite(codigo, usuario.nome),
+		})
+		return { destinatario: mascararEmail(usuario.email) }
+	}
+
+	private async gerarCodigoEEnviar(input: {
+		tipo: TipoEntidade
+		entidadeId: string
+		destinatario: string
+		assunto: string
+		mensagem: (codigo: string) => string
+	}): Promise<void> {
 		// Invalida códigos antigos não usados — reduz superfície de ataque.
 		await this.prisma.codigoRecuperacaoSenha.updateMany({
-			where: {
-				tipo: input.tipo,
-				entidadeId: alvo.id,
-				usadoEm: null,
-			},
+			where: { tipo: input.tipo, entidadeId: input.entidadeId, usadoEm: null },
 			data: { usadoEm: new Date() },
 		})
 
@@ -144,7 +173,7 @@ export class AuthService {
 		await this.prisma.codigoRecuperacaoSenha.create({
 			data: {
 				tipo: input.tipo,
-				entidadeId: alvo.id,
+				entidadeId: input.entidadeId,
 				codigoHash,
 				expiraEm: new Date(Date.now() + VALIDADE_CODIGO_MINUTOS * 60_000),
 			},
@@ -152,19 +181,15 @@ export class AuthService {
 
 		try {
 			await this.email.enviar({
-				destinatario: alvo.email,
-				assunto: 'Recuperação de senha — DF Distribuidora',
-				mensagem: montarEmailRecuperacao(codigo, alvo.nome),
+				destinatario: input.destinatario,
+				assunto: input.assunto,
+				mensagem: input.mensagem(codigo),
 			})
 		} catch (err) {
 			// Email falhou: removemos o código para evitar lixo no DB.
 			await this.prisma.codigoRecuperacaoSenha
 				.deleteMany({
-					where: {
-						tipo: input.tipo,
-						entidadeId: alvo.id,
-						codigoHash,
-					},
+					where: { tipo: input.tipo, entidadeId: input.entidadeId, codigoHash },
 				})
 				.catch(() => undefined)
 			throw new RegraNegocio(
@@ -172,13 +197,11 @@ export class AuthService {
 				`Não foi possível enviar o email: ${err instanceof Error ? err.message : 'erro desconhecido'}.`,
 			)
 		}
-
-		return { destinatario: mascararEmail(alvo.email) }
 	}
 
 	async redefinirSenha(input: RedefinirSenhaInput): Promise<void> {
 		validarComprimentoSenha(input.senhaNova)
-		const alvo = await this.localizarEntidade(input.tipo, input.identificador)
+		const alvo = await this.localizarEntidade(input.tipo, input.email)
 		if (!alvo) {
 			throw new RegraNegocio(
 				'CODIGO_INVALIDO',
@@ -222,7 +245,7 @@ export class AuthService {
 						where: { id: alvo.id },
 						data: { senhaHash: novoHash },
 					})
-				: this.prisma.cliente.update({
+				: this.prisma.usuarioCliente.update({
 						where: { id: alvo.id },
 						data: { senhaHash: novoHash },
 					}),
@@ -231,19 +254,19 @@ export class AuthService {
 
 	private async localizarEntidade(
 		tipo: TipoEntidade,
-		identificador: string,
+		email: string,
 	): Promise<{ id: string; email: string; nome: string } | null> {
+		const emailNormalizado = email.trim().toLowerCase()
 		if (tipo === 'ADMIN') {
-			const usuario = await this.prisma.usuario.findUnique({
-				where: { email: identificador.trim().toLowerCase() },
-			})
+			const usuario = await this.prisma.usuario.findUnique({ where: { email: emailNormalizado } })
 			if (!usuario || !usuario.ativo) return null
 			return { id: usuario.id, email: usuario.email, nome: usuario.nome }
 		}
-		const cnpj = apenasDigitosCnpj(identificador)
-		const cliente = await this.prisma.cliente.findUnique({ where: { cnpj } })
-		if (!cliente || cliente.status !== 'ATIVO') return null
-		return { id: cliente.id, email: cliente.email, nome: cliente.razaoSocial }
+		const usuarioCliente = await this.prisma.usuarioCliente.findUnique({
+			where: { email: emailNormalizado },
+		})
+		if (!usuarioCliente || !usuarioCliente.ativo) return null
+		return { id: usuarioCliente.id, email: usuarioCliente.email, nome: usuarioCliente.nome }
 	}
 }
 
@@ -271,6 +294,18 @@ function mascararEmail(email: string): string {
 	if (!dominio) return email
 	const visivel = user.slice(0, Math.min(2, user.length))
 	return `${visivel}${'*'.repeat(Math.max(1, user.length - visivel.length))}@${dominio}`
+}
+
+function montarEmailConvite(codigo: string, nome: string): string {
+	return [
+		`Olá, ${nome}.`,
+		'',
+		'Sua conta no Portal DF foi criada. Para concluir o cadastro, defina sua senha usando o código abaixo.',
+		`Código: ${codigo}`,
+		`Validade: ${VALIDADE_CODIGO_MINUTOS} minutos.`,
+		'',
+		'Acesse o portal, clique em "Definir senha" e informe seu email + o código acima.',
+	].join('\n')
 }
 
 function montarEmailRecuperacao(codigo: string, nome: string): string {

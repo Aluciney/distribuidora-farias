@@ -8,11 +8,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { AlertCircle, ArrowRight, FileText } from 'lucide-react-native';
+import { AlertCircle, ArrowRight, Building2, FileText } from 'lucide-react-native';
 import { Card, CardBody } from '@/components/Card';
 import { Badge, type Tom } from '@/components/Badge';
 import { Button } from '@/components/Button';
 import { useFaturas } from '@/features/faturas/useFaturas';
+import { BotaoSeletorFilial } from '@/features/portal/BotaoSeletorFilial';
+import { useAuthStore } from '@/store/auth.store';
 import { StatusFatura, type Fatura } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/format';
 
@@ -44,10 +46,15 @@ export default function FaturasScreen() {
   const [aba, setAba] = useState<Aba>('ABERTOS');
   const [pagina, setPagina] = useState(1);
   const PORPAGINA = 10;
+  const filialSelecionadaId = useAuthStore((s) => s.filialSelecionadaId);
+  const totalFiliais = useAuthStore(
+    (s) => s.usuarioCliente?.filiais.length ?? 0,
+  );
+  const exibirFilial = !filialSelecionadaId && totalFiliais > 1;
 
   useEffect(() => {
     setPagina(1);
-  }, [aba]);
+  }, [aba, filialSelecionadaId]);
 
   const { data, isLoading, isError, refetch, isRefetching } = useFaturas({
     status: statusFiltro(aba),
@@ -75,13 +82,16 @@ export default function FaturasScreen() {
         />
       }
     >
-      <View>
-        <Text className="text-2xl font-semibold text-slate-100">
-          Minhas Faturas
-        </Text>
-        <Text className="mt-1 text-sm text-slate-400">
-          Pague com Boleto, PIX ou cartão de crédito.
-        </Text>
+      <View className="flex-row items-start justify-between gap-3">
+        <View className="flex-1">
+          <Text className="text-2xl font-semibold text-slate-100">
+            Minhas Faturas
+          </Text>
+          <Text className="mt-1 text-sm text-slate-400">
+            Pague com Boleto, PIX ou cartão de crédito.
+          </Text>
+        </View>
+        <BotaoSeletorFilial />
       </View>
 
       <View className="flex-row gap-1 rounded-lg border border-slate-800 bg-slate-900 p-1">
@@ -153,6 +163,17 @@ export default function FaturasScreen() {
                   </Text>
                   <Badge tom={STATUS_TOM[f.status]}>{f.status}</Badge>
                 </View>
+                {exibirFilial && f.cliente && (
+                  <View className="flex-row items-center gap-1">
+                    <Building2 size={10} color="#7dd3fc" />
+                    <Text
+                      className="text-[11px] text-slate-400"
+                      numberOfLines={1}
+                    >
+                      {f.cliente.nomeFantasia ?? f.cliente.razaoSocial}
+                    </Text>
+                  </View>
+                )}
                 <Text className="text-sm text-slate-200">
                   {f.status === StatusFatura.PAGO
                     ? `Paga em ${f.dataPagamento ? formatDate(f.dataPagamento) : '—'}`

@@ -4,15 +4,21 @@ import type { Notificacao } from '@/types';
 interface NotificacaoDTO {
   id: string;
   clienteId: string;
+  usuarioClienteId?: string | null;
   faturaId: string | null;
   regraId: string | null;
-  canal: 'EMAIL' | 'WHATSAPP' | 'SMS' | null;
+  canal: 'EMAIL' | 'WHATSAPP' | null;
   titulo: string;
   mensagem: string;
   enviadaEm: string | null;
   lidaEm: string | null;
   erro: string | null;
   criadoEm: string;
+  filial?: {
+    id: string;
+    razaoSocial: string;
+    nomeFantasia: string | null;
+  } | null;
 }
 
 interface ListagemDTO {
@@ -27,6 +33,13 @@ function fromDto(dto: NotificacaoDTO): Notificacao {
     naoLida: dto.lidaEm == null,
     faturaId: dto.faturaId ?? undefined,
     criadoEm: dto.enviadaEm ?? dto.criadoEm,
+    filial: dto.filial
+      ? {
+          id: dto.filial.id,
+          razaoSocial: dto.filial.razaoSocial,
+          nomeFantasia: dto.filial.nomeFantasia ?? undefined,
+        }
+      : undefined,
   };
 }
 

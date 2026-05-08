@@ -35,8 +35,6 @@ function toBackendBody(dados: DadosCliente) {
     razaoSocial: dados.razaoSocial,
     nomeFantasia: dados.nomeFantasia ?? null,
     inscricaoEstadual: dados.inscricaoEstadual ?? null,
-    email: dados.email,
-    telefone: dados.telefone,
     limiteCredito: dados.limiteCredito,
     observacoes: dados.observacoes ?? null,
     status: dados.status,

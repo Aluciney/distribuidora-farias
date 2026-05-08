@@ -1,4 +1,4 @@
-import { Mail, MessageCircle, Smartphone } from 'lucide-react';
+import { Mail, MessageCircle } from 'lucide-react';
 import { CanalNotificacao, GatilhoRegua, type RegraCobranca } from '@/types';
 import { cn } from '@/lib/cn';
 
@@ -12,7 +12,6 @@ interface ReguaTimelineProps {
 const CANAL_ICONE = {
   [CanalNotificacao.EMAIL]: Mail,
   [CanalNotificacao.WHATSAPP]: MessageCircle,
-  [CanalNotificacao.SMS]: Smartphone,
 } as const;
 
 /**

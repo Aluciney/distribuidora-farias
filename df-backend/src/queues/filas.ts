@@ -14,6 +14,9 @@ export interface DadosJobRegua {
 
 export interface DadosJobNotificacao {
 	clienteId: string
+	/** Holding destinatária do disparo. Sempre definida na régua (resolvida
+	 * antes do enfileiramento). */
+	usuarioClienteId: string
 	faturaId: string
 	regraId: string
 	canal: CanalNotificacao

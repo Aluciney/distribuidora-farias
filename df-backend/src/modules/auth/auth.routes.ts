@@ -1,3 +1,4 @@
+import type { Cliente, UsuarioCliente, UsuarioClienteAcesso } from '@prisma/client'
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
@@ -5,18 +6,21 @@ import { NaoAutorizado } from '../../shared/erros'
 import { AuthService } from './auth.service'
 import {
 	alterarSenhaInputSchema,
-	clientePublicoResumoSchema,
-	definirSenhaInputSchema,
 	erroSchema,
 	esqueciSenhaInputSchema,
 	loginAdminInputSchema,
-	loginClienteInputSchema,
+	loginUsuarioClienteInputSchema,
 	redefinirSenhaInputSchema,
 	respostaEuSchema,
 	respostaLoginAdminSchema,
-	respostaLoginClienteSchema,
+	respostaLoginUsuarioClienteSchema,
+	usuarioClientePublicoSchema,
 	usuarioPublicoSchema,
 } from './auth.schemas'
+
+type UsuarioClienteComFiliais = UsuarioCliente & {
+	acessos: (UsuarioClienteAcesso & { cliente: Cliente })[]
+}
 
 export async function rotasAuth(app: FastifyInstance) {
 	const a = app.withTypeProvider<ZodTypeProvider>()
@@ -48,24 +52,19 @@ export async function rotasAuth(app: FastifyInstance) {
 		{
 			schema: {
 				tags: ['Auth'],
-				summary: 'Login de cliente (portal)',
-				body: loginClienteInputSchema,
-				response: { 200: respostaLoginClienteSchema, 401: erroSchema, 403: erroSchema },
+				summary: 'Login do portal do cliente (UsuarioCliente — holding/matriz)',
+				body: loginUsuarioClienteInputSchema,
+				response: { 200: respostaLoginUsuarioClienteSchema, 401: erroSchema, 403: erroSchema },
 			},
 		},
 		async (req, reply) => {
-			const cliente = await service.loginCliente(req.body.cnpj, req.body.senha)
-			const token = app.assinarSessao({ sub: cliente.id, tipo: 'CLIENTE' })
+			await service.loginUsuarioCliente(req.body.email, req.body.senha)
+			const usuarioCliente = await carregarUsuarioClienteComFiliais(app, req.body.email)
+			if (!usuarioCliente) throw new NaoAutorizado()
+			const token = app.assinarSessao({ sub: usuarioCliente.id, tipo: 'USUARIO_CLIENTE' })
 			app.setarCookieSessao(reply, token)
 			return {
-				cliente: {
-					id: cliente.id,
-					cnpj: cliente.cnpj,
-					razaoSocial: cliente.razaoSocial,
-					nomeFantasia: cliente.nomeFantasia,
-					email: cliente.email,
-					status: cliente.status,
-				},
+				usuarioCliente: serializarUsuarioCliente(usuarioCliente),
 				token,
 			}
 		},
@@ -91,32 +90,29 @@ export async function rotasAuth(app: FastifyInstance) {
 		{
 			schema: {
 				tags: ['Auth'],
-				summary: 'Retorna usuário ou cliente da sessão',
+				summary: 'Retorna o admin ou o usuário cliente da sessão',
 				security: [{ cookieAuth: [] }, { bearerAuth: [] }],
 				response: { 200: respostaEuSchema, 401: erroSchema },
 			},
 		},
 		async (req) => {
 			try {
-				const decoded = await req.jwtVerify<{ sub: string; tipo: 'ADMIN' | 'CLIENTE' }>()
+				const decoded = await req.jwtVerify<{ sub: string; tipo: 'ADMIN' | 'USUARIO_CLIENTE' }>()
 				if (decoded.tipo === 'ADMIN') {
 					const usuario = await service.obterUsuario(decoded.sub)
 					if (!usuario) throw new NaoAutorizado()
-					return { tipo: 'ADMIN' as const, usuario: serializarUsuario(usuario), cliente: null }
+					return {
+						tipo: 'ADMIN' as const,
+						usuario: serializarUsuario(usuario),
+						usuarioCliente: null,
+					}
 				}
-				const cliente = await service.obterCliente(decoded.sub)
-				if (!cliente) throw new NaoAutorizado()
+				const usuarioCliente = await carregarUsuarioClientePorId(app, decoded.sub)
+				if (!usuarioCliente) throw new NaoAutorizado()
 				return {
-					tipo: 'CLIENTE' as const,
+					tipo: 'USUARIO_CLIENTE' as const,
 					usuario: null,
-					cliente: {
-						id: cliente.id,
-						cnpj: cliente.cnpj,
-						razaoSocial: cliente.razaoSocial,
-						nomeFantasia: cliente.nomeFantasia,
-						email: cliente.email,
-						status: cliente.status,
-					},
+					usuarioCliente: serializarUsuarioCliente(usuarioCliente),
 				}
 			} catch {
 				throw new NaoAutorizado()
@@ -124,31 +120,15 @@ export async function rotasAuth(app: FastifyInstance) {
 		},
 	)
 
-	a.post(
-		'/cliente/definir-senha',
-		{
-			schema: {
-				tags: ['Auth'],
-				summary: 'Define senha do cliente no primeiro acesso',
-				body: definirSenhaInputSchema,
-				response: { 204: z.null(), 422: erroSchema },
-			},
-		},
-		async (req, reply) => {
-			await service.definirSenhaCliente(req.body.cnpj, req.body.senha)
-			return reply.status(204).send(null)
-		},
-	)
-
 	// -------------------------------------------------------------------------
-	// Alterar senha (autenticado, admin ou cliente)
+	// Alterar senha (autenticado, admin ou usuário cliente)
 	// -------------------------------------------------------------------------
 	a.post(
 		'/alterar-senha',
 		{
 			schema: {
 				tags: ['Auth'],
-				summary: 'Altera a própria senha (admin ou cliente autenticado)',
+				summary: 'Altera a própria senha',
 				security: [{ cookieAuth: [] }, { bearerAuth: [] }],
 				body: alterarSenhaInputSchema,
 				response: { 204: z.null(), 401: erroSchema, 422: erroSchema },
@@ -188,7 +168,7 @@ export async function rotasAuth(app: FastifyInstance) {
 		async (req) => {
 			return service.solicitarRecuperacaoSenha({
 				tipo: req.body.tipo,
-				identificador: req.body.identificador,
+				email: req.body.email,
 			})
 		},
 	)
@@ -206,7 +186,7 @@ export async function rotasAuth(app: FastifyInstance) {
 		async (req, reply) => {
 			await service.redefinirSenha({
 				tipo: req.body.tipo,
-				identificador: req.body.identificador,
+				email: req.body.email,
 				codigo: req.body.codigo,
 				senhaNova: req.body.senhaNova,
 			})
@@ -215,7 +195,35 @@ export async function rotasAuth(app: FastifyInstance) {
 	)
 }
 
-function serializarUsuario(u: { id: string; nome: string; email: string; perfil: 'ADMIN' | 'FINANCEIRO'; ativo: boolean; ultimoAcesso: Date | null; criadoEm: Date }) {
+async function carregarUsuarioClienteComFiliais(
+	app: FastifyInstance,
+	email: string,
+): Promise<UsuarioClienteComFiliais | null> {
+	return app.prisma.usuarioCliente.findUnique({
+		where: { email: email.trim().toLowerCase() },
+		include: { acessos: { include: { cliente: true } } },
+	})
+}
+
+async function carregarUsuarioClientePorId(
+	app: FastifyInstance,
+	id: string,
+): Promise<UsuarioClienteComFiliais | null> {
+	return app.prisma.usuarioCliente.findUnique({
+		where: { id },
+		include: { acessos: { include: { cliente: true } } },
+	})
+}
+
+function serializarUsuario(u: {
+	id: string
+	nome: string
+	email: string
+	perfil: 'ADMIN' | 'FINANCEIRO'
+	ativo: boolean
+	ultimoAcesso: Date | null
+	criadoEm: Date
+}) {
 	return {
 		id: u.id,
 		nome: u.nome,
@@ -227,5 +235,24 @@ function serializarUsuario(u: { id: string; nome: string; email: string; perfil:
 	}
 }
 
+function serializarUsuarioCliente(u: UsuarioClienteComFiliais) {
+	return {
+		id: u.id,
+		nome: u.nome,
+		email: u.email,
+		telefone: u.telefone,
+		ativo: u.ativo,
+		ultimoAcesso: u.ultimoAcesso ? u.ultimoAcesso.toISOString() : null,
+		filiais: u.acessos.map((a) => ({
+			id: a.cliente.id,
+			cnpj: a.cliente.cnpj,
+			razaoSocial: a.cliente.razaoSocial,
+			nomeFantasia: a.cliente.nomeFantasia,
+			status: a.cliente.status,
+			principal: a.principal,
+		})),
+	}
+}
+
 // Reexport para uso em outros módulos
-export { usuarioPublicoSchema, clientePublicoResumoSchema, erroSchema }
+export { usuarioPublicoSchema, usuarioClientePublicoSchema, erroSchema }

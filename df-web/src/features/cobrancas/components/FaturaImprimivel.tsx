@@ -106,17 +106,10 @@ export const FaturaImprimivel = forwardRef<HTMLDivElement, FaturaImprimivelProps
               {cliente.nomeFantasia}
             </div>
           )}
-          <div className="fi-grid-2" style={{ marginTop: 8 }}>
-            <div>
-              <div className="fi-label">CNPJ</div>
-              <div className="fi-mono fi-value">
-                {cliente?.cnpj ? formatCNPJ(cliente.cnpj) : '—'}
-              </div>
-            </div>
-            <div>
-              <div className="fi-label">Contato</div>
-              <div className="fi-value">{cliente?.email ?? '—'}</div>
-              <div className="fi-value">{cliente?.telefone ?? ''}</div>
+          <div style={{ marginTop: 8 }}>
+            <div className="fi-label">CNPJ</div>
+            <div className="fi-mono fi-value">
+              {cliente?.cnpj ? formatCNPJ(cliente.cnpj) : '—'}
             </div>
           </div>
         </div>

@@ -9,7 +9,6 @@ export const usuarioSchema = z.object({
   perfil: z.enum([
     PerfilUsuario.ADMIN,
     PerfilUsuario.FINANCEIRO,
-    PerfilUsuario.CLIENTE,
   ]),
   ativo: z.boolean(),
 });

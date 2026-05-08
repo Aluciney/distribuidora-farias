@@ -2,6 +2,8 @@ import { useMutation } from '@tanstack/react-query';
 import { authService } from '@/features/auth/services/auth.mock';
 import { toast } from '@/store/toast.store';
 
+type TipoEntidade = 'ADMIN' | 'USUARIO_CLIENTE';
+
 export function useAlterarSenha() {
   return useMutation({
     mutationFn: (payload: { senhaAtual: string; senhaNova: string }) =>
@@ -20,10 +22,8 @@ export function useAlterarSenha() {
 
 export function useEsqueciSenha() {
   return useMutation({
-    mutationFn: (payload: {
-      tipo: 'ADMIN' | 'CLIENTE';
-      identificador: string;
-    }) => authService.esqueciSenha(payload),
+    mutationFn: (payload: { tipo: TipoEntidade; email: string }) =>
+      authService.esqueciSenha(payload),
     onError: (err: Error) => {
       toast.erro('Falha ao solicitar recuperação', err.message);
     },
@@ -33,8 +33,8 @@ export function useEsqueciSenha() {
 export function useRedefinirSenha() {
   return useMutation({
     mutationFn: (payload: {
-      tipo: 'ADMIN' | 'CLIENTE';
-      identificador: string;
+      tipo: TipoEntidade;
+      email: string;
       codigo: string;
       senhaNova: string;
     }) => authService.redefinirSenha(payload),

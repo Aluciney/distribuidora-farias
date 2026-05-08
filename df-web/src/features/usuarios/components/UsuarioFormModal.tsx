@@ -143,7 +143,6 @@ export function UsuarioFormModal({
             >
               <option value={PerfilUsuario.ADMIN}>Administrador</option>
               <option value={PerfilUsuario.FINANCEIRO}>Financeiro</option>
-              <option value={PerfilUsuario.CLIENTE}>Cliente</option>
             </Select>
           </FormField>
 

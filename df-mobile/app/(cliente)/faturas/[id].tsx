@@ -11,6 +11,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ArrowLeft,
   Banknote,
+  Building2,
   Check,
   Copy,
   CreditCard,
@@ -119,6 +120,14 @@ export default function FaturaDetalheScreen() {
           <Text className="text-lg font-semibold text-slate-100">
             {fatura.numero}
           </Text>
+          {fatura.cliente && (
+            <View className="mt-0.5 flex-row items-center gap-1">
+              <Building2 size={11} color="#7dd3fc" />
+              <Text className="text-xs text-slate-400" numberOfLines={1}>
+                {fatura.cliente.nomeFantasia ?? fatura.cliente.razaoSocial}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
 

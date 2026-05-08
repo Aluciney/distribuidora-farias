@@ -2,6 +2,7 @@ import type { Cliente, Fatura } from '@prisma/client'
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
+import { obterClientesAcessiveis } from '../../shared/tenancy'
 import { erroSchema } from '../auth/auth.schemas'
 import {
 	baixaManualInputSchema,
@@ -26,8 +27,6 @@ export function serializarFatura(f: Fatura & { cliente?: Cliente | null }) {
 					cnpj: f.cliente.cnpj,
 					razaoSocial: f.cliente.razaoSocial,
 					nomeFantasia: f.cliente.nomeFantasia,
-					email: f.cliente.email,
-					telefone: f.cliente.telefone,
 				}
 			: null,
 		valor: f.valor,
@@ -209,17 +208,19 @@ export async function rotasCobrancasAdmin(app: FastifyInstance) {
 export async function rotasCobrancasCliente(app: FastifyInstance) {
 	const a = app.withTypeProvider<ZodTypeProvider>()
 	const service = new CobrancasService(app.prisma)
-	const guard = [app.requerCliente]
+	const guard = [app.requerUsuarioCliente]
 
 	a.get(
 		'/',
 		{
 			schema: {
 				tags: ['Cobranças (cliente)'],
-				summary: 'Lista faturas do cliente logado (paginado)',
+				summary: 'Lista faturas das filiais do usuário cliente logado (paginado)',
 				security: [{ cookieAuth: [] }, { bearerAuth: [] }],
 				querystring: z.object({
 					status: statusFaturaSchema.optional(),
+					/// Quando informado, filtra a uma única filial (loja).
+					filialId: z.string().uuid().optional(),
 					pagina: z.coerce.number().int().positive().default(1),
 					porPagina: z.coerce.number().int().positive().max(100).default(10),
 				}),
@@ -235,8 +236,10 @@ export async function rotasCobrancasCliente(app: FastifyInstance) {
 			preHandler: guard,
 		},
 		async (req) => {
-			const { itens, total } = await service.listarPorCliente(req.sessao.sub, {
+			const acessiveis = await obterClientesAcessiveis(app.prisma, req.sessao.sub)
+			const { itens, total } = await service.listarPorClientes(acessiveis, {
 				status: req.query.status,
+				filialId: req.query.filialId,
 				pagina: req.query.pagina,
 				porPagina: req.query.porPagina,
 			})
@@ -254,14 +257,17 @@ export async function rotasCobrancasCliente(app: FastifyInstance) {
 		{
 			schema: {
 				tags: ['Cobranças (cliente)'],
-				summary: 'Detalhe de fatura do cliente logado',
+				summary: 'Detalhe de fatura (qualquer filial acessível)',
 				security: [{ cookieAuth: [] }, { bearerAuth: [] }],
 				params: z.object({ id: z.string().uuid() }),
 				response: { 200: faturaSchema, 403: erroSchema, 404: erroSchema },
 			},
 			preHandler: guard,
 		},
-		async (req) => serializarFatura(await service.obterParaCliente(req.params.id, req.sessao.sub)),
+		async (req) => {
+			const acessiveis = await obterClientesAcessiveis(app.prisma, req.sessao.sub)
+			return serializarFatura(await service.obterParaUsuarioCliente(req.params.id, acessiveis))
+		},
 	)
 
 	a.post(
@@ -277,6 +283,9 @@ export async function rotasCobrancasCliente(app: FastifyInstance) {
 			},
 			preHandler: guard,
 		},
-		async (req) => serializarFatura(await service.pagarComCartao(req.params.id, req.sessao.sub, req.body)),
+		async (req) => {
+			const acessiveis = await obterClientesAcessiveis(app.prisma, req.sessao.sub)
+			return serializarFatura(await service.pagarComCartao(req.params.id, acessiveis, req.body))
+		},
 	)
 }

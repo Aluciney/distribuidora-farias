@@ -7,6 +7,7 @@ import { Pagination } from '@/components/ui/Pagination';
 import { FaturasClienteTabela } from '@/features/cliente-portal/faturas/components/FaturasClienteTabela';
 import { PagamentoModal } from '@/features/cliente-portal/faturas/components/PagamentoModal';
 import { useFaturasCliente } from '@/features/cliente-portal/faturas/hooks/useFaturasCliente';
+import { useAuthStore } from '@/store/auth.store';
 import { StatusFatura, type Fatura } from '@/types';
 import { cn } from '@/lib/cn';
 
@@ -42,6 +43,10 @@ export function FaturasClientePage() {
     () => ({ status: statusFiltradoParaAba(aba), pagina, porPagina }),
     [aba, pagina, porPagina],
   );
+  const filialSelecionadaId = useAuthStore((s) => s.filialSelecionadaId);
+  const filiais = useAuthStore((s) => s.filiais);
+  const exibirFilial = !filialSelecionadaId && filiais.length > 1;
+
   const { data, isLoading, isError, refetch } = useFaturasCliente(filtro);
   const faturas = data?.itens;
   const total = data?.total ?? 0;
@@ -127,6 +132,7 @@ export function FaturasClientePage() {
             <FaturasClienteTabela
               faturas={faturas}
               onSelecionar={setFaturaSelecionada}
+              exibirFilial={exibirFilial}
             />
           )}
         </CardBody>

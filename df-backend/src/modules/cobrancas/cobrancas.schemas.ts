@@ -9,8 +9,6 @@ export const clienteResumoSchema = z
 		cnpj: z.string(),
 		razaoSocial: z.string(),
 		nomeFantasia: z.string().nullable(),
-		email: z.string(),
-		telefone: z.string(),
 	})
 	.nullable()
 

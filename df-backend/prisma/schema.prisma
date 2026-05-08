@@ -12,15 +12,15 @@ datasource db {
 // =========================================================================
 
 model Usuario {
-  id            String    @id @default(uuid())
-  nome          String
-  email         String    @unique
-  senhaHash     String    @map("senha_hash")
-  perfil        Perfil
-  ativo         Boolean   @default(true)
-  ultimoAcesso  DateTime? @map("ultimo_acesso")
-  criadoEm      DateTime  @default(now()) @map("criado_em")
-  atualizadoEm  DateTime  @updatedAt @map("atualizado_em")
+  id           String    @id @default(uuid())
+  nome         String
+  email        String    @unique
+  senhaHash    String    @map("senha_hash")
+  perfil       Perfil
+  ativo        Boolean   @default(true)
+  ultimoAcesso DateTime? @map("ultimo_acesso")
+  criadoEm     DateTime  @default(now()) @map("criado_em")
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em")
 
   @@index([email])
   @@map("usuarios")
@@ -32,57 +32,105 @@ enum Perfil {
 }
 
 // =========================================================================
-// CLIENTES
+// CLIENTES (lojas/filiais — entidade fiscal, sem login próprio)
 // =========================================================================
 
 model Cliente {
-  id                  String         @id @default(uuid())
-  cnpj                String         @unique
-  razaoSocial         String         @map("razao_social")
-  nomeFantasia        String?        @map("nome_fantasia")
-  inscricaoEstadual   String?        @map("inscricao_estadual")
-  email               String
-  telefone            String
-  status              StatusCliente  @default(ATIVO)
-  limiteCredito       Int            @default(0) @map("limite_credito")
+  id                  String        @id @default(uuid())
+  cnpj                String        @unique
+  razaoSocial         String        @map("razao_social")
+  nomeFantasia        String?       @map("nome_fantasia")
+  inscricaoEstadual   String?       @map("inscricao_estadual")
+  status              StatusCliente @default(ATIVO)
+  limiteCredito       Int           @default(0) @map("limite_credito")
   observacoes         String?
-  /// Hash da senha do portal do cliente. Pode ser null até o primeiro acesso.
-  senhaHash           String?        @map("senha_hash")
-  ultimoAcesso        DateTime?      @map("ultimo_acesso")
   // Endereço inline
-  enderecoCep         String         @map("endereco_cep")
-  enderecoLogradouro  String         @map("endereco_logradouro")
-  enderecoNumero      String         @map("endereco_numero")
-  enderecoComplemento String?        @map("endereco_complemento")
-  enderecoBairro      String         @map("endereco_bairro")
-  enderecoCidade      String         @map("endereco_cidade")
-  enderecoUf          String         @map("endereco_uf")
-  criadoEm            DateTime       @default(now()) @map("criado_em")
-  atualizadoEm        DateTime       @updatedAt @map("atualizado_em")
+  enderecoCep         String        @map("endereco_cep")
+  enderecoLogradouro  String        @map("endereco_logradouro")
+  enderecoNumero      String        @map("endereco_numero")
+  enderecoComplemento String?       @map("endereco_complemento")
+  enderecoBairro      String        @map("endereco_bairro")
+  enderecoCidade      String        @map("endereco_cidade")
+  enderecoUf          String        @map("endereco_uf")
+  criadoEm            DateTime      @default(now()) @map("criado_em")
+  atualizadoEm        DateTime      @updatedAt @map("atualizado_em")
 
   pedidos      Pedido[]
   faturas      Fatura[]
   notificacoes Notificacao[]
-  dispositivos DispositivoPush[]
+  acessos      UsuarioClienteAcesso[]
 
   @@index([cnpj])
   @@index([status])
   @@map("clientes")
 }
 
+enum StatusCliente {
+  ATIVO
+  INATIVO
+  BLOQUEADO
+}
+
+// =========================================================================
+// USUARIO CLIENTE (holding/matriz — o que de fato faz login no portal)
+// =========================================================================
+
+/// Conta de acesso ao portal do cliente. Concentra dados de contato (email,
+/// telefone) e credenciais. Pode controlar uma ou várias lojas (filiais) via
+/// `UsuarioClienteAcesso`. Toda comunicação automática (régua, recuperação
+/// de senha, push) é endereçada via UsuarioCliente — Cliente é apenas a
+/// entidade fiscal (CNPJ + endereço da loja).
+model UsuarioCliente {
+  id           String    @id @default(uuid())
+  nome         String
+  email        String    @unique
+  telefone     String
+  /// `null` enquanto o convite inicial não foi aceito (senha definida).
+  senhaHash    String?   @map("senha_hash")
+  ativo        Boolean   @default(true)
+  ultimoAcesso DateTime? @map("ultimo_acesso")
+  criadoEm     DateTime  @default(now()) @map("criado_em")
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em")
+
+  acessos      UsuarioClienteAcesso[]
+  dispositivos DispositivoPush[]
+  notificacoes Notificacao[]
+
+  @@index([email])
+  @@map("usuarios_cliente")
+}
+
+/// Junção N:N entre UsuarioCliente e Cliente. `principal=true` marca a
+/// filial-sede (informativo — a permissão é a mesma para todas as filiais
+/// vinculadas).
+model UsuarioClienteAcesso {
+  id               String         @id @default(uuid())
+  usuarioClienteId String         @map("usuario_cliente_id")
+  usuarioCliente   UsuarioCliente @relation(fields: [usuarioClienteId], references: [id], onDelete: Cascade)
+  clienteId        String         @map("cliente_id")
+  cliente          Cliente        @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  principal        Boolean        @default(false)
+  criadoEm         DateTime       @default(now()) @map("criado_em")
+
+  @@unique([usuarioClienteId, clienteId])
+  @@index([clienteId])
+  @@map("usuarios_cliente_acessos")
+}
+
 /// Dispositivo móvel autorizado a receber push notifications via Expo.
 /// O token (formato `ExponentPushToken[xxxx]`) é único por instalação do app.
+/// Vinculado ao UsuarioCliente — push do holding cobre todas as filiais.
 model DispositivoPush {
-  id         String   @id @default(uuid())
-  clienteId  String   @map("cliente_id")
-  cliente    Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  token      String   @unique
+  id               String         @id @default(uuid())
+  usuarioClienteId String         @map("usuario_cliente_id")
+  usuarioCliente   UsuarioCliente @relation(fields: [usuarioClienteId], references: [id], onDelete: Cascade)
+  token            String         @unique
   /// "ios", "android" ou "web".
-  plataforma String?
-  ultimoUso  DateTime @default(now()) @map("ultimo_uso")
-  criadoEm   DateTime @default(now()) @map("criado_em")
+  plataforma       String?
+  ultimoUso        DateTime       @default(now()) @map("ultimo_uso")
+  criadoEm         DateTime       @default(now()) @map("criado_em")
 
-  @@index([clienteId])
+  @@index([usuarioClienteId])
   @@map("dispositivos_push")
 }
 
@@ -90,9 +138,9 @@ model DispositivoPush {
 /// hasheado (bcrypt) — nunca em plaintext.
 model CodigoRecuperacaoSenha {
   id         String    @id @default(uuid())
-  /// "ADMIN" (Usuario) ou "CLIENTE" (Cliente).
+  /// "ADMIN" (Usuario) ou "USUARIO_CLIENTE" (UsuarioCliente).
   tipo       String
-  /// ID do `Usuario` ou `Cliente` ao qual o código pertence.
+  /// ID do `Usuario` ou `UsuarioCliente` ao qual o código pertence.
   entidadeId String    @map("entidade_id")
   codigoHash String    @map("codigo_hash")
   expiraEm   DateTime  @map("expira_em")
@@ -103,29 +151,23 @@ model CodigoRecuperacaoSenha {
   @@map("codigos_recuperacao_senha")
 }
 
-enum StatusCliente {
-  ATIVO
-  INATIVO
-  BLOQUEADO
-}
-
 // =========================================================================
 // PEDIDOS (espelho do ERP — read-only via API)
 // =========================================================================
 
 model Pedido {
-  id           String        @id @default(uuid())
-  numero       String        @unique
-  clienteId    String        @map("cliente_id")
-  cliente      Cliente       @relation(fields: [clienteId], references: [id])
-  valorTotal   Int           @map("valor_total")
+  id           String       @id @default(uuid())
+  numero       String       @unique
+  clienteId    String       @map("cliente_id")
+  cliente      Cliente      @relation(fields: [clienteId], references: [id])
+  valorTotal   Int          @map("valor_total")
   status       StatusPedido
-  emitidoEm    DateTime      @map("emitido_em")
+  emitidoEm    DateTime     @map("emitido_em")
   observacoes  String?
   /// Origem do registro: `ERP` (sincronizado) ou `MANUAL`.
-  origem       OrigemPedido  @default(ERP)
-  criadoEm     DateTime      @default(now()) @map("criado_em")
-  atualizadoEm DateTime      @updatedAt @map("atualizado_em")
+  origem       OrigemPedido @default(ERP)
+  criadoEm     DateTime     @default(now()) @map("criado_em")
+  atualizadoEm DateTime     @updatedAt @map("atualizado_em")
 
   itens   ItemPedido[]
   faturas Fatura[]
@@ -294,7 +336,6 @@ model AcaoRegua {
 enum CanalNotificacao {
   EMAIL
   WHATSAPP
-  SMS
 }
 
 // =========================================================================
@@ -302,23 +343,29 @@ enum CanalNotificacao {
 // =========================================================================
 
 model Notificacao {
-  id        String            @id @default(uuid())
-  clienteId String            @map("cliente_id")
-  cliente   Cliente           @relation(fields: [clienteId], references: [id])
-  faturaId  String?           @map("fatura_id")
-  fatura    Fatura?           @relation(fields: [faturaId], references: [id])
-  regraId   String?           @map("regra_id")
-  canal     CanalNotificacao?
-  titulo    String
-  mensagem  String
+  id               String            @id @default(uuid())
+  /// Loja (Cliente) à qual a notificação se refere — sempre presente.
+  clienteId        String            @map("cliente_id")
+  cliente          Cliente           @relation(fields: [clienteId], references: [id])
+  /// Holding destinatária do disparo. `null` quando a régua não conseguiu
+  /// resolver um responsável (filial órfã) — neste caso `erro` indica a causa.
+  usuarioClienteId String?           @map("usuario_cliente_id")
+  usuarioCliente   UsuarioCliente?   @relation(fields: [usuarioClienteId], references: [id])
+  faturaId         String?           @map("fatura_id")
+  fatura           Fatura?           @relation(fields: [faturaId], references: [id])
+  regraId          String?           @map("regra_id")
+  canal            CanalNotificacao?
+  titulo           String
+  mensagem         String
   /// `null` = ainda não enviada; `DateTime` = enviada com sucesso.
-  enviadaEm DateTime?         @map("enviada_em")
+  enviadaEm        DateTime?         @map("enviada_em")
   /// `null` = não lida; `DateTime` = lida pelo cliente no portal.
-  lidaEm    DateTime?         @map("lida_em")
-  erro      String?
-  criadoEm  DateTime          @default(now()) @map("criado_em")
+  lidaEm           DateTime?         @map("lida_em")
+  erro             String?
+  criadoEm         DateTime          @default(now()) @map("criado_em")
 
   @@index([clienteId])
+  @@index([usuarioClienteId])
   @@index([faturaId])
   @@index([lidaEm])
   @@map("notificacoes")
@@ -356,10 +403,10 @@ model ConfiguracoesCobranca {
   pixTipoChave TipoChavePix @map("pix_tipo_chave")
   pixChave     String       @map("pix_chave")
 
-  encargosMultaPercentual        Decimal @db.Decimal(5, 2) @default(0) @map("encargos_multa_percentual")
-  encargosJurosMensalPercentual  Decimal @db.Decimal(5, 2) @default(0) @map("encargos_juros_mensal_percentual")
+  encargosMultaPercentual        Decimal @default(0) @map("encargos_multa_percentual") @db.Decimal(5, 2)
+  encargosJurosMensalPercentual  Decimal @default(0) @map("encargos_juros_mensal_percentual") @db.Decimal(5, 2)
   encargosDescontoAntecipadoDias Int     @default(0) @map("encargos_desconto_antecipado_dias")
-  encargosDescontoPercentual     Decimal @db.Decimal(5, 2) @default(0) @map("encargos_desconto_percentual")
+  encargosDescontoPercentual     Decimal @default(0) @map("encargos_desconto_percentual") @db.Decimal(5, 2)
   encargosMensagemPadrao         String? @map("encargos_mensagem_padrao")
 
   /// Texto enviado junto ao boleto via WhatsApp. Suporta placeholders:

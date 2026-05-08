@@ -4,15 +4,27 @@ import {
   type FiltrosFaturasCliente,
   type PagamentoCartaoPayload,
 } from '@/features/faturas/faturas.service';
+import { useAuthStore } from '@/store/auth.store';
 import { toast } from '@/store/toast.store';
 import type { Fatura, UUID } from '@/types';
 
 const KEY = ['faturas-cliente'] as const;
 
+/**
+ * Lista faturas escopada à filial selecionada (ou consolidada quando "todas").
+ * O filtro pode ser sobrescrito explicitamente via `filialId` no input.
+ */
 export function useFaturas(filtros: FiltrosFaturasCliente = {}) {
+  const filialSelecionadaId = useAuthStore((s) => s.filialSelecionadaId);
+  const filialEfetiva =
+    filtros.filialId !== undefined ? filtros.filialId : filialSelecionadaId;
+  const filtrosEfetivos: FiltrosFaturasCliente = {
+    ...filtros,
+    filialId: filialEfetiva ?? undefined,
+  };
   return useQuery({
-    queryKey: [...KEY, 'lista', filtros],
-    queryFn: () => faturasService.listar(filtros),
+    queryKey: [...KEY, 'lista', filtrosEfetivos],
+    queryFn: () => faturasService.listar(filtrosEfetivos),
   });
 }
 

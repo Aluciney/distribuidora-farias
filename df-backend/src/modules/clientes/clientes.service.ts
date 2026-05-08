@@ -17,8 +17,6 @@ interface CriarInput {
 	razaoSocial: string
 	nomeFantasia?: string | null
 	inscricaoEstadual?: string | null
-	email: string
-	telefone: string
 	limiteCredito: number
 	observacoes?: string | null
 	endereco: Endereco
@@ -29,8 +27,6 @@ interface AtualizarInput {
 	razaoSocial?: string
 	nomeFantasia?: string | null
 	inscricaoEstadual?: string | null
-	email?: string
-	telefone?: string
 	limiteCredito?: number
 	observacoes?: string | null
 	endereco?: Endereco
@@ -91,8 +87,6 @@ export class ClientesService {
 				razaoSocial: input.razaoSocial,
 				nomeFantasia: input.nomeFantasia ?? null,
 				inscricaoEstadual: input.inscricaoEstadual ?? null,
-				email: input.email,
-				telefone: input.telefone,
 				status: input.status,
 				limiteCredito: input.limiteCredito,
 				observacoes: input.observacoes ?? null,
@@ -115,8 +109,6 @@ export class ClientesService {
 				razaoSocial: input.razaoSocial,
 				nomeFantasia: input.nomeFantasia,
 				inscricaoEstadual: input.inscricaoEstadual,
-				email: input.email,
-				telefone: input.telefone,
 				limiteCredito: input.limiteCredito,
 				observacoes: input.observacoes,
 				status: input.status,

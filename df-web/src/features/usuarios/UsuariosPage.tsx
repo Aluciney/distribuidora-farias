@@ -29,13 +29,11 @@ type FiltroAtivo = 'TODOS' | 'ATIVOS' | 'INATIVOS';
 const PERFIL_LABEL: Record<PerfilUsuario, string> = {
   [PerfilUsuario.ADMIN]: 'Administrador',
   [PerfilUsuario.FINANCEIRO]: 'Financeiro',
-  [PerfilUsuario.CLIENTE]: 'Cliente',
 };
 
-const PERFIL_TOM: Record<PerfilUsuario, 'violet' | 'sky' | 'slate'> = {
+const PERFIL_TOM: Record<PerfilUsuario, 'violet' | 'sky'> = {
   [PerfilUsuario.ADMIN]: 'violet',
   [PerfilUsuario.FINANCEIRO]: 'sky',
-  [PerfilUsuario.CLIENTE]: 'slate',
 };
 
 export function UsuariosPage() {
@@ -116,7 +114,6 @@ export function UsuariosPage() {
                 <option value="TODOS">Todos os perfis</option>
                 <option value={PerfilUsuario.ADMIN}>Administrador</option>
                 <option value={PerfilUsuario.FINANCEIRO}>Financeiro</option>
-                <option value={PerfilUsuario.CLIENTE}>Cliente</option>
               </Select>
               <Select
                 value={ativoFiltro}

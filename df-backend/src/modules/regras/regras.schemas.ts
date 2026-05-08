@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 export const gatilhoSchema = z.enum(['ANTES_VENCIMENTO', 'DIA_VENCIMENTO', 'APOS_VENCIMENTO'])
-export const canalSchema = z.enum(['EMAIL', 'WHATSAPP', 'SMS'])
+export const canalSchema = z.enum(['EMAIL', 'WHATSAPP'])
 
 export const acaoSchema = z.object({
 	id: z.string(),

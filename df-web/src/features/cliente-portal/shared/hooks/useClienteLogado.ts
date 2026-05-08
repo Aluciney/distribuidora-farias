@@ -1,33 +1,31 @@
 import { useQuery } from '@tanstack/react-query';
 import { authService } from '@/features/auth/services/auth.mock';
+import { fromUsuarioClienteDTO } from '@/services/api/transformers';
 import { useAuthStore } from '@/store/auth.store';
-import type { Cliente } from '@/types';
+import type { UsuarioCliente } from '@/types';
 
 /**
- * Resolve o `Cliente` da sessão consultando `/auth/eu` — único endpoint
- * acessível pelo próprio cliente. (`/admin/clientes/:id` é só admin.)
+ * Resolve o `UsuarioCliente` (holding) da sessão consultando `/auth/eu` —
+ * único endpoint acessível pelo próprio usuário do portal. Inclui as filiais
+ * vinculadas, usadas pelo seletor de filial e pela página de perfil.
  */
-export function useClienteLogado() {
-  const clienteId = useAuthStore((s) => s.clienteId);
-  return useQuery<Cliente | null>({
-    queryKey: ['cliente-logado', clienteId],
+export function useUsuarioClienteLogado() {
+  const usuarioClienteId = useAuthStore((s) => s.usuarioClienteId);
+  const setFiliais = useAuthStore((s) => s.setFiliais);
+  return useQuery<UsuarioCliente | null>({
+    queryKey: ['usuario-cliente-logado', usuarioClienteId],
     queryFn: async () => {
       const eu = await authService.eu();
-      if (eu.tipo !== 'CLIENTE' || !eu.cliente) return null;
-      return {
-        id: eu.cliente.id,
-        cnpj: eu.cliente.cnpj,
-        razaoSocial: eu.cliente.razaoSocial,
-        nomeFantasia: eu.cliente.nomeFantasia ?? undefined,
-        email: eu.cliente.email,
-        telefone: '',
-        endereco: { cep: '', logradouro: '', numero: '', bairro: '', cidade: '', uf: '' },
-        status: eu.cliente.status,
-        limiteCredito: 0,
-        criadoEm: '',
-        atualizadoEm: '',
-      };
+      if (eu.tipo !== 'USUARIO_CLIENTE' || !eu.usuarioCliente) return null;
+      const u = fromUsuarioClienteDTO(eu.usuarioCliente);
+      // Mantém o store sincronizado com a verdade do servidor (filial pode
+      // ter sido vinculada/desvinculada por um admin desde o login).
+      setFiliais(u.filiais);
+      return u;
     },
-    enabled: Boolean(clienteId),
+    enabled: Boolean(usuarioClienteId),
   });
 }
+
+/** @deprecated Use `useUsuarioClienteLogado`. */
+export const useClienteLogado = useUsuarioClienteLogado;

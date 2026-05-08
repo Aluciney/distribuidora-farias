@@ -7,7 +7,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Bell, BellOff, CheckCheck, ChevronRight } from 'lucide-react-native';
+import {
+  Bell,
+  BellOff,
+  Building2,
+  CheckCheck,
+  ChevronRight,
+} from 'lucide-react-native';
 import { Card, CardBody } from '@/components/Card';
 import { Button } from '@/components/Button';
 import {
@@ -120,6 +126,14 @@ export default function NotificacoesScreen() {
                         {formatDateTime(n.criadoEm)}
                       </Text>
                     </View>
+                    {n.filial && (
+                      <View className="flex-row items-center gap-1 self-start rounded-md bg-slate-800 px-1.5 py-0.5">
+                        <Building2 size={10} color="#7dd3fc" />
+                        <Text className="text-[10px] text-slate-400">
+                          {n.filial.nomeFantasia ?? n.filial.razaoSocial}
+                        </Text>
+                      </View>
+                    )}
                     <Text className="text-xs text-slate-400">{n.mensagem}</Text>
                   </View>
                   {n.faturaId && (

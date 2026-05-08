@@ -19,6 +19,10 @@ async function seed() {
 	await prisma.itemPedido.deleteMany()
 	await prisma.pedido.deleteMany()
 	await prisma.produto.deleteMany()
+	await prisma.dispositivoPush.deleteMany()
+	await prisma.codigoRecuperacaoSenha.deleteMany()
+	await prisma.usuarioClienteAcesso.deleteMany()
+	await prisma.usuarioCliente.deleteMany()
 	await prisma.cliente.deleteMany()
 	await prisma.usuario.deleteMany()
 	await prisma.configuracoesCobranca.deleteMany()
@@ -55,7 +59,7 @@ async function seed() {
 		},
 	})
 
-	console.log('🌱 Usuários...')
+	console.log('🌱 Usuários (equipe interna)...')
 	await prisma.usuario.createMany({
 		data: [
 			{ nome: 'Aluciney Wanderley', email: 'aluciney@df.com', senhaHash, perfil: 'ADMIN', ativo: true },
@@ -65,14 +69,12 @@ async function seed() {
 		],
 	})
 
-	console.log('🌱 Clientes...')
+	console.log('🌱 Clientes (lojas/filiais)...')
 	const clientesSeed = [
 		{
 			cnpj: '11444777000161',
 			razaoSocial: 'Mercado Central LTDA',
 			nomeFantasia: 'Mercado Central',
-			email: 'contato@mercadocentral.com.br',
-			telefone: '91988887777',
 			status: 'ATIVO' as const,
 			limiteCredito: 5000000,
 			cep: '66010100',
@@ -86,8 +88,6 @@ async function seed() {
 			cnpj: '34028316000103',
 			razaoSocial: 'Supermercado Boa Compra LTDA',
 			nomeFantasia: 'Boa Compra',
-			email: 'financeiro@boacompra.com.br',
-			telefone: '91977776666',
 			status: 'ATIVO' as const,
 			limiteCredito: 8000000,
 			cep: '66060001',
@@ -101,8 +101,6 @@ async function seed() {
 			cnpj: '00360305000104',
 			razaoSocial: 'Atacado Norte LTDA',
 			nomeFantasia: 'Atacado Norte',
-			email: 'compras@atacadonorte.com.br',
-			telefone: '91966665555',
 			status: 'ATIVO' as const,
 			limiteCredito: 12000000,
 			cep: '66115000',
@@ -116,8 +114,6 @@ async function seed() {
 			cnpj: '60746948000112',
 			razaoSocial: 'Conveniência Rápida ME',
 			nomeFantasia: 'Rápida 24h',
-			email: 'rapida24h@gmail.com',
-			telefone: '91955554444',
 			status: 'INATIVO' as const,
 			limiteCredito: 1500000,
 			cep: '66085145',
@@ -131,8 +127,6 @@ async function seed() {
 			cnpj: '15436940000103',
 			razaoSocial: 'Padaria Do Bairro EIRELI',
 			nomeFantasia: 'Pão Bom',
-			email: 'padaria@paobom.com.br',
-			telefone: '91944443333',
 			status: 'ATIVO' as const,
 			limiteCredito: 800000,
 			cep: '66050000',
@@ -146,8 +140,6 @@ async function seed() {
 			cnpj: '47960950000121',
 			razaoSocial: 'Empório Sabores LTDA',
 			nomeFantasia: 'Empório Sabores',
-			email: 'sabores@emporio.com.br',
-			telefone: '91933332222',
 			status: 'BLOQUEADO' as const,
 			limiteCredito: 2500000,
 			cep: '66040000',
@@ -166,11 +158,8 @@ async function seed() {
 					cnpj: c.cnpj,
 					razaoSocial: c.razaoSocial,
 					nomeFantasia: c.nomeFantasia,
-					email: c.email,
-					telefone: c.telefone,
 					status: c.status,
 					limiteCredito: c.limiteCredito,
-					senhaHash,
 					enderecoCep: c.cep,
 					enderecoLogradouro: c.logradouro,
 					enderecoNumero: c.numero,
@@ -181,6 +170,70 @@ async function seed() {
 			}),
 		),
 	)
+
+	console.log('🌱 Usuários cliente (holdings) + vínculos com filiais...')
+	// Caso 1 — rede com 2 filiais (Mercado Central como sede, Boa Compra filial).
+	const holdingCentral = await prisma.usuarioCliente.create({
+		data: {
+			nome: 'Grupo Central',
+			email: 'rede@grupocentral.com.br',
+			telefone: '91990001000',
+			senhaHash,
+			ativo: true,
+		},
+	})
+	await prisma.usuarioClienteAcesso.createMany({
+		data: [
+			{ usuarioClienteId: holdingCentral.id, clienteId: clientes[0].id, principal: true },
+			{ usuarioClienteId: holdingCentral.id, clienteId: clientes[1].id, principal: false },
+		],
+	})
+
+	// Caso 2 — holding 1:1 (Atacado Norte).
+	const holdingAtacado = await prisma.usuarioCliente.create({
+		data: {
+			nome: 'Atacado Norte',
+			email: 'contato@atacadonorte.com.br',
+			telefone: '91966665555',
+			senhaHash,
+			ativo: true,
+		},
+	})
+	await prisma.usuarioClienteAcesso.create({
+		data: { usuarioClienteId: holdingAtacado.id, clienteId: clientes[2].id, principal: true },
+	})
+
+	// Caso 3 — holding 1:1 (Padaria Pão Bom).
+	const holdingPaobom = await prisma.usuarioCliente.create({
+		data: {
+			nome: 'Padaria Pão Bom',
+			email: 'padaria@paobom.com.br',
+			telefone: '91944443333',
+			senhaHash,
+			ativo: true,
+		},
+	})
+	await prisma.usuarioClienteAcesso.create({
+		data: { usuarioClienteId: holdingPaobom.id, clienteId: clientes[4].id, principal: true },
+	})
+
+	// Caso 4 — holding com filial bloqueada (Empório Sabores).
+	const holdingEmporio = await prisma.usuarioCliente.create({
+		data: {
+			nome: 'Empório Sabores',
+			email: 'sabores@emporio.com.br',
+			telefone: '91933332222',
+			senhaHash,
+			ativo: true,
+		},
+	})
+	await prisma.usuarioClienteAcesso.create({
+		data: { usuarioClienteId: holdingEmporio.id, clienteId: clientes[5].id, principal: true },
+	})
+
+	// Caso 5 — Conveniência Rápida (clientes[3]) fica órfã: nenhum
+	// UsuarioCliente vinculado. Cenário usado para validar que admin precisa
+	// vincular antes de a régua conseguir notificar.
 
 	console.log('🌱 Produtos...')
 	const produtosSeed = [
@@ -330,7 +383,7 @@ async function seed() {
 			diasOffset: 15,
 			ativo: false,
 			acoes: {
-				create: [{ canal: 'SMS', mensagem: 'DF: fatura {{numero}} em atraso há 15 dias. Pague via PIX: {{pix}}' }],
+				create: [{ canal: 'WHATSAPP', mensagem: 'DF: fatura {{numero}} em atraso há 15 dias. Pague via PIX: {{pix}}' }],
 			},
 		},
 	})

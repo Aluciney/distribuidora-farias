@@ -2,8 +2,10 @@
  * Push notifications via Expo Push API.
  *
  * Cada device registrado no portal mobile guarda um `ExponentPushToken[xxxx]`
- * em `dispositivos_push`. Para enviar, montamos um batch e mandamos para
- * `https://exp.host/--/api/v2/push/send` (até 100 mensagens por request).
+ * em `dispositivos_push`, ligado a um `UsuarioCliente` (a holding que faz
+ * login). Para enviar push relativo a uma fatura/loja, resolvemos quais
+ * UsuarioCliente estão vinculados àquele Cliente e disparamos para os tokens
+ * de todos eles.
  *
  * Tokens com erro `DeviceNotRegistered` são apagados — o app foi desinstalado
  * ou o usuário desabilitou push, e mantê-los só polui o banco.
@@ -46,11 +48,20 @@ const noopLogger: Logger = {
 	error: (...a) => console.error('[push]', ...a),
 }
 
-export interface EnviarPushInput {
+export interface EnviarPushParaClienteInput {
+	/** Loja (Cliente) à qual a notificação se refere — push vai para todos os
+	 * UsuarioCliente vinculados a essa loja. */
 	clienteId: string
 	titulo: string
 	corpo: string
 	/** Payload entregue ao app no `notification.request.content.data`. */
+	data?: Record<string, unknown>
+}
+
+export interface EnviarPushParaUsuarioClienteInput {
+	usuarioClienteId: string
+	titulo: string
+	corpo: string
 	data?: Record<string, unknown>
 }
 
@@ -61,7 +72,7 @@ export class PushService {
 	) {}
 
 	async registrarToken(input: {
-		clienteId: string
+		usuarioClienteId: string
 		token: string
 		plataforma?: string | null
 	}): Promise<void> {
@@ -71,12 +82,12 @@ export class PushService {
 		await this.prisma.dispositivoPush.upsert({
 			where: { token: input.token },
 			update: {
-				clienteId: input.clienteId,
+				usuarioClienteId: input.usuarioClienteId,
 				plataforma: input.plataforma ?? null,
 				ultimoUso: new Date(),
 			},
 			create: {
-				clienteId: input.clienteId,
+				usuarioClienteId: input.usuarioClienteId,
 				token: input.token,
 				plataforma: input.plataforma ?? null,
 			},
@@ -89,22 +100,57 @@ export class PushService {
 			.catch(() => undefined)
 	}
 
-	async enviarParaCliente(input: EnviarPushInput): Promise<{ enviados: number }> {
+	/**
+	 * Push direto a um UsuarioCliente (holding) — útil para avisos genéricos.
+	 */
+	async enviarParaUsuarioCliente(
+		input: EnviarPushParaUsuarioClienteInput,
+	): Promise<{ enviados: number }> {
 		const dispositivos = await this.prisma.dispositivoPush.findMany({
-			where: { clienteId: input.clienteId },
+			where: { usuarioClienteId: input.usuarioClienteId },
+		})
+		return this.dispatch(dispositivos, input.titulo, input.corpo, input.data)
+	}
+
+	/**
+	 * Push relativo a uma loja (Cliente). Dispara para todos os
+	 * UsuarioCliente ativos vinculados a essa loja. Filiais órfãs ficam
+	 * silenciosas (zero enviados) — quem cria a notificação registra o erro
+	 * no audit trail se quiser visibilidade.
+	 */
+	async enviarParaCliente(
+		input: EnviarPushParaClienteInput,
+	): Promise<{ enviados: number }> {
+		const dispositivos = await this.prisma.dispositivoPush.findMany({
+			where: {
+				usuarioCliente: {
+					ativo: true,
+					acessos: { some: { clienteId: input.clienteId } },
+				},
+			},
 		})
 		if (dispositivos.length === 0) {
 			this.logger.info(
-				`Cliente ${input.clienteId} sem dispositivos cadastrados — push ignorado.`,
+				`Cliente ${input.clienteId} sem dispositivos de holding ativa — push ignorado.`,
 			)
 			return { enviados: 0 }
 		}
+		return this.dispatch(dispositivos, input.titulo, input.corpo, input.data)
+	}
+
+	private async dispatch(
+		dispositivos: { token: string }[],
+		titulo: string,
+		corpo: string,
+		data?: Record<string, unknown>,
+	): Promise<{ enviados: number }> {
+		if (dispositivos.length === 0) return { enviados: 0 }
 
 		const mensagens: ExpoPushMessage[] = dispositivos.map((d) => ({
 			to: d.token,
-			title: input.titulo,
-			body: input.corpo,
-			data: input.data,
+			title: titulo,
+			body: corpo,
+			data,
 			sound: 'default',
 			priority: 'high',
 			channelId: 'default',
@@ -113,6 +159,7 @@ export class PushService {
 		try {
 			const tickets = await this.enviarBatch(mensagens)
 			const tokensInvalidos: string[] = []
+			const tokensOk: string[] = []
 			tickets.forEach((ticket, idx) => {
 				if (ticket.status === 'error') {
 					const erro = ticket.details?.error
@@ -122,6 +169,8 @@ export class PushService {
 					if (erro === 'DeviceNotRegistered') {
 						tokensInvalidos.push(dispositivos[idx].token)
 					}
+				} else {
+					tokensOk.push(dispositivos[idx].token)
 				}
 			})
 
@@ -134,14 +183,13 @@ export class PushService {
 				)
 			}
 
-			const sucessos = tickets.filter((t) => t.status === 'ok').length
-			if (sucessos > 0) {
+			if (tokensOk.length > 0) {
 				await this.prisma.dispositivoPush.updateMany({
-					where: { clienteId: input.clienteId },
+					where: { token: { in: tokensOk } },
 					data: { ultimoUso: new Date() },
 				})
 			}
-			return { enviados: sucessos }
+			return { enviados: tokensOk.length }
 		} catch (err) {
 			this.logger.error('Falha ao chamar Expo Push API', err)
 			return { enviados: 0 }

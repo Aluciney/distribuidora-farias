@@ -3,13 +3,31 @@ import { api } from '@/services/api/http';
 import { toast } from '@/store/toast.store';
 import { apenasDigitos } from '@/utils/cnpj';
 
-export interface PerfilCliente {
+export interface PerfilFilial {
   id: string;
   cnpj: string;
   razaoSocial: string;
   nomeFantasia: string | null;
+  inscricaoEstadual: string | null;
+  status: 'ATIVO' | 'INATIVO' | 'BLOQUEADO';
+  endereco: {
+    cep: string;
+    logradouro: string;
+    numero: string;
+    complemento: string | null;
+    bairro: string;
+    cidade: string;
+    uf: string;
+  };
+  principal: boolean;
+}
+
+export interface PerfilCliente {
+  id: string;
+  nome: string;
   email: string;
   telefone: string;
+  filiais: PerfilFilial[];
 }
 
 const KEY = ['cliente-perfil'] as const;
@@ -22,19 +40,26 @@ export function useClientePerfil() {
   });
 }
 
-export function useAtualizarTelefoneCliente() {
+export interface AtualizarContatoInput {
+  nome?: string;
+  telefone?: string;
+}
+
+export function useAtualizarContatoCliente() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (telefone: string) =>
-      api.patch<{ id: string; telefone: string }>('/cliente/perfil/telefone', {
-        telefone: apenasDigitos(telefone),
-      }),
+    mutationFn: (input: AtualizarContatoInput) =>
+      api.patch<{ id: string; nome: string; telefone: string }>(
+        '/cliente/perfil/contato',
+        {
+          nome: input.nome,
+          telefone: input.telefone ? apenasDigitos(input.telefone) : undefined,
+        },
+      ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: KEY });
-      toast.sucesso(
-        'Telefone atualizado',
-        'Seus dados de contato foram salvos.',
-      );
+      qc.invalidateQueries({ queryKey: ['usuario-cliente-logado'] });
+      toast.sucesso('Dados atualizados', 'Suas informações foram salvas.');
     },
     onError: (err: Error) => {
       toast.erro('Falha ao atualizar', err.message);

@@ -18,7 +18,14 @@ export type StatusFiltro = StatusFatura | 'TODOS';
 export interface FiltrosFaturas {
   busca?: string;
   status?: StatusFiltro;
-  /** Restringe ao próprio cliente; usado nos hooks do portal `/cliente`. */
+  /**
+   * Filial específica:
+   * - No portal admin: filtra a listagem por uma loja específica.
+   * - No portal cliente: escopa o resultado a uma única filial entre as
+   *   acessíveis pela holding logada (seletor de filial).
+   */
+  filialId?: UUID;
+  /** @deprecated use `filialId`. Mantido por compatibilidade. */
   clienteId?: UUID;
   pagina?: number;
   porPagina?: number;
@@ -58,7 +65,7 @@ export interface PagamentoCartaoPayload {
 const PORTAL_CLIENTE_PORTAS = ['/cliente'] as const;
 
 function ehCliente(): boolean {
-  return useAuthStore.getState().tipo === 'CLIENTE';
+  return useAuthStore.getState().tipo === 'USUARIO_CLIENTE';
 }
 
 interface ListagemDTO {
@@ -76,10 +83,13 @@ function statusParam(status?: StatusFiltro): string | undefined {
 export const cobrancasService = {
   async listar(filtros: FiltrosFaturas = {}): Promise<ListagemFaturas> {
     const path = ehCliente() ? '/cliente/faturas' : '/admin/cobrancas';
+    const filialOuCliente = filtros.filialId ?? filtros.clienteId;
     const dto = await api.get<ListagemDTO>(path, {
       busca: ehCliente() ? undefined : filtros.busca,
       status: statusParam(filtros.status),
-      clienteId: ehCliente() ? undefined : filtros.clienteId,
+      // Admin: backend chama de `clienteId`; portal: chama de `filialId`.
+      clienteId: ehCliente() ? undefined : filialOuCliente,
+      filialId: ehCliente() ? filialOuCliente : undefined,
       pagina: filtros.pagina,
       porPagina: filtros.porPagina,
     });

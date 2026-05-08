@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Controller, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, Building2, LogIn, Wand2 } from 'lucide-react';
+import { AlertCircle, LogIn, Mail, Wand2 } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Button } from '@/components/ui/Button';
@@ -13,7 +13,6 @@ import {
 } from '@/features/auth/schemas/auth.schema';
 import { useLoginCliente } from '@/features/auth/hooks/useAuth';
 import { SENHA_DEMO } from '@/features/auth/services/auth.mock';
-import { maskCNPJ } from '@/utils/cnpj';
 
 export function LoginClienteForm() {
   const navigate = useNavigate();
@@ -23,12 +22,11 @@ export function LoginClienteForm() {
   const {
     register,
     handleSubmit,
-    control,
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginClienteFormValues>({
     resolver: zodResolver(loginClienteSchema),
-    defaultValues: { cnpj: '', senha: '' },
+    defaultValues: { email: '', senha: '' },
   });
 
   const onSubmit = handleSubmit(async (valores) => {
@@ -42,8 +40,8 @@ export function LoginClienteForm() {
   });
 
   const preencherDemo = () => {
-    // CNPJ válido do "Mercado Central LTDA" (cliente seed ativo).
-    setValue('cnpj', maskCNPJ('11444777000161'));
+    // Holding "Grupo Central" (rede com 2 filiais) — credenciais de seed.
+    setValue('email', 'rede@grupocentral.com.br');
     setValue('senha', SENHA_DEMO);
     setErro(null);
   };
@@ -51,26 +49,19 @@ export function LoginClienteForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <FormField
-        label="CNPJ"
-        htmlFor="login-cnpj"
+        label="Email"
+        htmlFor="login-email-cliente"
         obrigatorio
-        erro={errors.cnpj?.message}
+        erro={errors.email?.message}
       >
-        <Controller
-          control={control}
-          name="cnpj"
-          render={({ field }) => (
-            <Input
-              id="login-cnpj"
-              placeholder="00.000.000/0000-00"
-              inputMode="numeric"
-              autoComplete="username"
-              iconeEsquerda={<Building2 className="h-4 w-4" />}
-              value={maskCNPJ(field.value ?? '')}
-              onChange={(e) => field.onChange(maskCNPJ(e.target.value))}
-              invalido={Boolean(errors.cnpj)}
-            />
-          )}
+        <Input
+          id="login-email-cliente"
+          type="email"
+          placeholder="seu@email.com"
+          autoComplete="username"
+          iconeEsquerda={<Mail className="h-4 w-4" />}
+          {...register('email')}
+          invalido={Boolean(errors.email)}
         />
       </FormField>
 

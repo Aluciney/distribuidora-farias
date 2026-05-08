@@ -1,11 +1,13 @@
 import { randomUUID } from 'node:crypto'
 import type { Cliente, Fatura, MetodoPagamento, PrismaClient, StatusFatura } from '@prisma/client'
 import { NaoEncontrado, Proibido, RegraNegocio } from '../../shared/erros'
+import { obterResponsaveisDoCliente } from '../../shared/tenancy'
 import { detectarBandeira, ultimosDigitos, validadeFutura, validarLuhn } from '../../shared/utils/cartao'
 import { whatsappService } from '../whatsapp/whatsapp.service'
 import { PushService } from '../push/push.service'
 import { type IBoletoGerador, BoletoMockGerador } from './boleto.gerador'
 import { gerarBoletoPdf } from './boleto.pdf'
+import { ConfirmacaoNotificador } from './confirmacao.notificador'
 import { type IPixGerador, PixMockGerador } from './pix.gerador'
 
 /** Texto enviado quando a empresa não personaliza a mensagem nas configurações. */
@@ -37,9 +39,11 @@ export class CobrancasService {
 	private boleto: IBoletoGerador = new BoletoMockGerador()
 	private pix: IPixGerador = new PixMockGerador()
 	private push: PushService
+	private confirmacao: ConfirmacaoNotificador
 
 	constructor(private readonly prisma: PrismaClient) {
 		this.push = new PushService(prisma)
+		this.confirmacao = new ConfirmacaoNotificador(prisma)
 	}
 
 	async listar(filtros: {
@@ -75,11 +79,26 @@ export class CobrancasService {
 		return { itens, total }
 	}
 
-	async listarPorCliente(
-		clienteId: string,
-		filtros: { status?: StatusFatura; pagina: number; porPagina: number },
+	async listarPorClientes(
+		clientesIds: string[],
+		filtros: {
+			status?: StatusFatura
+			/** Filtra a uma única filial — útil quando o portal escopa via seletor. */
+			filialId?: string
+			pagina: number
+			porPagina: number
+		},
 	): Promise<{ itens: (Fatura & { cliente: Cliente })[]; total: number }> {
-		const where = { clienteId, status: filtros.status }
+		if (clientesIds.length === 0) return { itens: [], total: 0 }
+		const escopo = filtros.filialId
+			? clientesIds.includes(filtros.filialId)
+				? [filtros.filialId]
+				: []
+			: clientesIds
+		if (escopo.length === 0) {
+			throw new Proibido('FILIAL_INACESSIVEL', 'Filial não pertence à sua conta.')
+		}
+		const where = { clienteId: { in: escopo }, status: filtros.status }
 		const [itens, total] = await Promise.all([
 			this.prisma.fatura.findMany({
 				where,
@@ -99,9 +118,12 @@ export class CobrancasService {
 		return f
 	}
 
-	async obterParaCliente(id: string, clienteId: string): Promise<Fatura & { cliente: Cliente }> {
+	async obterParaUsuarioCliente(
+		id: string,
+		clientesAcessiveis: string[],
+	): Promise<Fatura & { cliente: Cliente }> {
 		const f = await this.obter(id)
-		if (f.clienteId !== clienteId) throw new Proibido()
+		if (!clientesAcessiveis.includes(f.clienteId)) throw new Proibido()
 		return f
 	}
 
@@ -168,7 +190,7 @@ export class CobrancasService {
 		if (fatura.status !== 'PENDENTE' && fatura.status !== 'VENCIDO') {
 			throw new RegraNegocio('FATURA_NAO_BAIXAVEL', `Não é possível baixar fatura com status ${fatura.status}.`)
 		}
-		return this.prisma.fatura.update({
+		const atualizada = await this.prisma.fatura.update({
 			where: { id },
 			data: {
 				status: 'PAGO',
@@ -178,6 +200,18 @@ export class CobrancasService {
 				observacoes: input.observacoes ?? fatura.observacoes,
 			},
 		})
+
+		// Notifica o cliente em todos os canais (push + email + whatsapp + audit).
+		void this.confirmacao
+			.notificar({
+				fatura: atualizada,
+				cliente: fatura.cliente,
+				metodo: input.metodoPago,
+				dataPagamento: input.dataPagamento,
+			})
+			.catch(() => undefined)
+
+		return atualizada
 	}
 
 	async cancelar(id: string, motivo: string): Promise<Fatura> {
@@ -189,20 +223,41 @@ export class CobrancasService {
 			where: { id },
 			data: { status: 'CANCELADO', motivoCancelamento: motivo, canceladoEm: new Date() },
 		})
-		await this.prisma.notificacao.create({
-			data: {
-				clienteId: fatura.clienteId,
-				faturaId: fatura.id,
-				titulo: 'Fatura cancelada',
-				mensagem: `Sua fatura ${fatura.numero} foi cancelada. Motivo: ${motivo}.`,
-				enviadaEm: new Date(),
-			},
-		})
+
+		const responsaveis = await obterResponsaveisDoCliente(this.prisma, fatura.clienteId)
+		const titulo = 'Fatura cancelada'
+		const mensagem = `Sua fatura ${fatura.numero} foi cancelada. Motivo: ${motivo}.`
+		if (responsaveis.length === 0) {
+			await this.prisma.notificacao.create({
+				data: {
+					clienteId: fatura.clienteId,
+					faturaId: fatura.id,
+					titulo,
+					mensagem,
+					erro: 'FILIAL_SEM_RESPONSAVEL',
+				},
+			})
+		} else {
+			await this.prisma.notificacao.createMany({
+				data: responsaveis.map((u) => ({
+					clienteId: fatura.clienteId,
+					usuarioClienteId: u.id,
+					faturaId: fatura.id,
+					titulo,
+					mensagem,
+					enviadaEm: new Date(),
+				})),
+			})
+		}
 		return atualizada
 	}
 
-	async pagarComCartao(id: string, clienteId: string, input: PagarCartaoInput): Promise<Fatura> {
-		const fatura = await this.obterParaCliente(id, clienteId)
+	async pagarComCartao(
+		id: string,
+		clientesAcessiveis: string[],
+		input: PagarCartaoInput,
+	): Promise<Fatura> {
+		const fatura = await this.obterParaUsuarioCliente(id, clientesAcessiveis)
 		if (fatura.status !== 'PENDENTE' && fatura.status !== 'VENCIDO') {
 			throw new RegraNegocio('FATURA_NAO_PAGAVEL', `Não é possível pagar fatura com status ${fatura.status}.`)
 		}
@@ -214,31 +269,33 @@ export class CobrancasService {
 		}
 
 		const bandeira = detectarBandeira(input.numero)
+		const ultimos = ultimosDigitos(input.numero)
 		const authId = `MOCK-${randomUUID().split('-')[0].toUpperCase()}`
+		const dataPagamento = new Date()
 
 		const atualizada = await this.prisma.fatura.update({
 			where: { id },
 			data: {
 				status: 'PAGO',
 				valorPago: fatura.valor,
-				dataPagamento: new Date(),
+				dataPagamento,
 				pagamentoMetodo: 'CARTAO_CREDITO',
 				pagamentoCartaoBandeira: bandeira,
-				pagamentoCartaoUltimosDigitos: ultimosDigitos(input.numero),
+				pagamentoCartaoUltimosDigitos: ultimos,
 				pagamentoCartaoParcelas: input.parcelas,
 				pagamentoCartaoAuthId: authId,
 			},
 		})
 
-		await this.prisma.notificacao.create({
-			data: {
-				clienteId,
-				faturaId: id,
-				titulo: 'Pagamento confirmado',
-				mensagem: `Sua fatura ${fatura.numero} foi paga com cartão ${bandeira} em ${input.parcelas}x.`,
-				enviadaEm: new Date(),
-			},
-		})
+		void this.confirmacao
+			.notificar({
+				fatura: atualizada,
+				cliente: fatura.cliente,
+				metodo: 'CARTAO_CREDITO',
+				dataPagamento,
+				detalhe: `${bandeira} final ${ultimos} — ${input.parcelas}x`,
+			})
+			.catch(() => undefined)
 
 		return atualizada
 	}
@@ -246,19 +303,46 @@ export class CobrancasService {
 	async enviarBoletoWhatsapp(id: string): Promise<{ enviadoEm: string; destinatario: string }> {
 		const fatura = await this.obter(id)
 		const cliente = fatura.cliente
-		if (!cliente.telefone || cliente.telefone.replace(/\D/g, '').length < 10) {
-			throw new RegraNegocio('TELEFONE_INVALIDO', 'Cliente sem telefone válido cadastrado.')
+
+		// Telefone agora vive no UsuarioCliente (holding). Pegamos o vínculo
+		// principal e usamos o telefone dele; se não houver, qualquer holding
+		// ativa serve. Sem holding → erro explícito para o admin vincular.
+		const responsaveis = await obterResponsaveisDoCliente(this.prisma, cliente.id)
+		if (responsaveis.length === 0) {
+			throw new RegraNegocio(
+				'FILIAL_SEM_RESPONSAVEL',
+				'Esta filial não tem holding vinculada — vincule um UsuarioCliente antes de enviar.',
+			)
 		}
+		const acessoPrincipal = await this.prisma.usuarioClienteAcesso.findFirst({
+			where: {
+				clienteId: cliente.id,
+				principal: true,
+				usuarioCliente: { ativo: true },
+			},
+		})
+		const responsavel =
+			(acessoPrincipal && responsaveis.find((r) => r.id === acessoPrincipal.usuarioClienteId)) ??
+			responsaveis[0]
+		const telefoneDigitos = responsavel.telefone.replace(/\D/g, '')
+		if (telefoneDigitos.length < 10) {
+			throw new RegraNegocio('TELEFONE_INVALIDO', 'Holding responsável sem telefone válido.')
+		}
+
 		const config = await this.prisma.configuracoesCobranca.findUnique({ where: { id: 'unica' } })
 		if (!config) {
 			throw new RegraNegocio('CONFIGURACAO_INCOMPLETA', 'Configurações de cobrança não encontradas.')
 		}
 
 		const pdf = await gerarBoletoPdf({ fatura, cliente, config })
-		const mensagem = montarMensagem(config.whatsappMensagemBoleto ?? MENSAGEM_BOLETO_PADRAO, fatura, cliente)
+		const mensagem = montarMensagem(
+			config.whatsappMensagemBoleto ?? MENSAGEM_BOLETO_PADRAO,
+			fatura,
+			cliente,
+		)
 
 		await whatsappService.enviarDocumento(
-			cliente.telefone,
+			telefoneDigitos,
 			{
 				buffer: pdf,
 				nomeArquivo: `boleto-${fatura.numero}.pdf`,
@@ -267,7 +351,7 @@ export class CobrancasService {
 			mensagem,
 		)
 
-		return { enviadoEm: new Date().toISOString(), destinatario: cliente.telefone }
+		return { enviadoEm: new Date().toISOString(), destinatario: telefoneDigitos }
 	}
 
 	private async gerarNumeroFatura(): Promise<string> {

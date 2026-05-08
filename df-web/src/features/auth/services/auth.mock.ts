@@ -5,11 +5,12 @@
  */
 import { api } from '@/services/api/http';
 import {
+  fromUsuarioClienteDTO,
   fromUsuarioDTO,
+  type UsuarioClienteDTO,
   type UsuarioDTO,
 } from '@/services/api/transformers';
-import type { Cliente, Usuario } from '@/types';
-import { apenasDigitos } from '@/utils/cnpj';
+import type { Usuario, UsuarioCliente } from '@/types';
 
 export const SENHA_DEMO = 'df2026';
 
@@ -19,7 +20,7 @@ export interface LoginAdminPayload {
 }
 
 export interface LoginClientePayload {
-  cnpj: string;
+  email: string;
   senha: string;
 }
 
@@ -29,46 +30,14 @@ interface RespostaLoginAdmin {
 }
 
 interface RespostaLoginCliente {
-  cliente: {
-    id: string;
-    cnpj: string;
-    razaoSocial: string;
-    nomeFantasia: string | null;
-    email: string;
-    status: 'ATIVO' | 'INATIVO' | 'BLOQUEADO';
-  };
+  usuarioCliente: UsuarioClienteDTO;
   token: string;
 }
 
-interface ClienteResumoDTO {
-  id: string;
-  cnpj: string;
-  razaoSocial: string;
-  nomeFantasia: string | null;
-  email: string;
-  status: 'ATIVO' | 'INATIVO' | 'BLOQUEADO';
-}
-
 interface RespostaEu {
-  tipo: 'ADMIN' | 'CLIENTE';
+  tipo: 'ADMIN' | 'USUARIO_CLIENTE';
   usuario: UsuarioDTO | null;
-  cliente: ClienteResumoDTO | null;
-}
-
-function clienteFromResumo(r: ClienteResumoDTO): Cliente {
-  return {
-    id: r.id,
-    cnpj: r.cnpj,
-    razaoSocial: r.razaoSocial,
-    nomeFantasia: r.nomeFantasia ?? undefined,
-    email: r.email,
-    telefone: '',
-    endereco: { cep: '', logradouro: '', numero: '', bairro: '', cidade: '', uf: '' },
-    status: r.status,
-    limiteCredito: 0,
-    criadoEm: '',
-    atualizadoEm: '',
-  };
+  usuarioCliente: UsuarioClienteDTO | null;
 }
 
 export const authService = {
@@ -80,15 +49,12 @@ export const authService = {
     return fromUsuarioDTO(res.usuario);
   },
 
-  async loginCliente(payload: LoginClientePayload): Promise<Cliente> {
-    const cnpj = apenasDigitos(payload.cnpj);
+  async loginCliente(payload: LoginClientePayload): Promise<UsuarioCliente> {
     const res = await api.post<RespostaLoginCliente>('/auth/login/cliente', {
-      cnpj,
+      email: payload.email.trim().toLowerCase(),
       senha: payload.senha,
     });
-    // /auth/eu confirma o resumo da sessão (mesmo shape do login)
-    const eu = await api.get<RespostaEu>('/auth/eu');
-    return clienteFromResumo(eu.cliente ?? res.cliente);
+    return fromUsuarioClienteDTO(res.usuarioCliente);
   },
 
   async logout(): Promise<void> {
@@ -107,8 +73,8 @@ export const authService = {
   },
 
   async esqueciSenha(payload: {
-    tipo: 'ADMIN' | 'CLIENTE';
-    identificador: string;
+    tipo: 'ADMIN' | 'USUARIO_CLIENTE';
+    email: string;
   }): Promise<{ destinatario: string | null }> {
     return api.post<{ destinatario: string | null }>(
       '/auth/esqueci-senha',
@@ -117,8 +83,8 @@ export const authService = {
   },
 
   async redefinirSenha(payload: {
-    tipo: 'ADMIN' | 'CLIENTE';
-    identificador: string;
+    tipo: 'ADMIN' | 'USUARIO_CLIENTE';
+    email: string;
     codigo: string;
     senhaNova: string;
   }): Promise<void> {

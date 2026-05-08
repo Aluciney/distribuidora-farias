@@ -17,6 +17,7 @@ import { rotasPedidos } from './modules/pedidos/pedidos.routes'
 import { rotasProdutos } from './modules/produtos/produtos.routes'
 import { rotasRegras } from './modules/regras/regras.routes'
 import { rotasUsuarios } from './modules/usuarios/usuarios.routes'
+import { rotasUsuariosCliente } from './modules/usuarios-cliente/usuarios-cliente.routes'
 import { rotasWhatsapp } from './modules/whatsapp/whatsapp.routes'
 import { authPlugin } from './plugins/auth.plugin'
 import { errorHandlerPlugin } from './plugins/error-handler.plugin'
@@ -58,6 +59,7 @@ export async function buildApp() {
 
 	await app.register(rotasAuth, { prefix: '/auth' })
 	await app.register(rotasUsuarios, { prefix: '/admin/usuarios' })
+	await app.register(rotasUsuariosCliente, { prefix: '/admin/usuarios-cliente' })
 	await app.register(rotasClientes, { prefix: '/admin/clientes' })
 	await app.register(rotasProdutos, { prefix: '/admin/produtos' })
 	await app.register(rotasPedidos, { prefix: '/admin/pedidos' })

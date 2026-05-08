@@ -16,16 +16,16 @@ interface RequireAuthProps {
 export function RequireAuth({ tipo, children }: RequireAuthProps) {
   const tipoAtual = useAuthStore((s) => s.tipo);
   const usuarioId = useAuthStore((s) => s.usuarioId);
-  const clienteId = useAuthStore((s) => s.clienteId);
+  const usuarioClienteId = useAuthStore((s) => s.usuarioClienteId);
   const location = useLocation();
 
   const autenticado =
     tipoAtual === tipo &&
     ((tipo === 'ADMIN' && Boolean(usuarioId)) ||
-      (tipo === 'CLIENTE' && Boolean(clienteId)));
+      (tipo === 'USUARIO_CLIENTE' && Boolean(usuarioClienteId)));
 
   if (!autenticado) {
-    const param = tipo === 'CLIENTE' ? 'cliente' : 'admin';
+    const param = tipo === 'USUARIO_CLIENTE' ? 'cliente' : 'admin';
     return (
       <Navigate
         to={`/login?tipo=${param}`}

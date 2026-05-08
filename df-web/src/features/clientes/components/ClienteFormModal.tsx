@@ -14,7 +14,7 @@ import {
   useAtualizarCliente,
 } from '@/features/clientes/hooks/useClientes';
 import { StatusCliente, type Cliente } from '@/types';
-import { maskCEP, maskCNPJ, maskTelefone } from '@/utils/cnpj';
+import { maskCEP, maskCNPJ } from '@/utils/cnpj';
 import { cn } from '@/lib/cn';
 
 interface ClienteFormModalProps {
@@ -29,8 +29,6 @@ const VALORES_PADRAO: ClienteFormValues = {
   razaoSocial: '',
   nomeFantasia: '',
   inscricaoEstadual: '',
-  email: '',
-  telefone: '',
   endereco: {
     cep: '',
     logradouro: '',
@@ -67,8 +65,6 @@ export function ClienteFormModal({
       razaoSocial: cliente.razaoSocial,
       nomeFantasia: cliente.nomeFantasia ?? '',
       inscricaoEstadual: cliente.inscricaoEstadual ?? '',
-      email: cliente.email,
-      telefone: cliente.telefone,
       endereco: cliente.endereco,
       status: cliente.status,
       limiteCredito: cliente.limiteCredito / 100,
@@ -111,11 +107,11 @@ export function ClienteFormModal({
     <Modal
       aberto={aberto}
       onFechar={onFechar}
-      titulo={ehEdicao ? 'Editar cliente' : 'Cadastrar cliente'}
+      titulo={ehEdicao ? 'Editar filial' : 'Cadastrar filial'}
       descricao={
         ehEdicao
-          ? 'Atualize as informações do cliente.'
-          : 'Preencha os dados para cadastrar um novo cliente.'
+          ? 'Atualize os dados fiscais e de endereço da loja.'
+          : 'Cadastre uma nova loja. Após criar, vincule a uma holding (UsuarioCliente) para liberar o acesso ao portal.'
       }
       tamanho="xl"
       rodape={
@@ -124,7 +120,7 @@ export function ClienteFormModal({
             Cancelar
           </Button>
           <Button onClick={onSubmit} loading={carregando}>
-            {ehEdicao ? 'Salvar alterações' : 'Cadastrar cliente'}
+            {ehEdicao ? 'Salvar alterações' : 'Cadastrar filial'}
           </Button>
         </>
       }
@@ -221,50 +217,16 @@ export function ClienteFormModal({
           </div>
         </section>
 
-        <section>
-          <h3 className="mb-3 text-sm font-semibold text-slate-200">
-            Contato
-          </h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormField
-              label="Email"
-              htmlFor="email"
-              obrigatorio
-              erro={errors.email?.message}
-            >
-              <Input
-                id="email"
-                type="email"
-                placeholder="financeiro@empresa.com.br"
-                {...register('email')}
-                invalido={Boolean(errors.email)}
-              />
-            </FormField>
-
-            <FormField
-              label="Telefone"
-              htmlFor="telefone"
-              obrigatorio
-              erro={errors.telefone?.message}
-            >
-              <Controller
-                control={control}
-                name="telefone"
-                render={({ field }) => (
-                  <Input
-                    id="telefone"
-                    placeholder="(00) 00000-0000"
-                    value={maskTelefone(field.value ?? '')}
-                    onChange={(e) =>
-                      field.onChange(maskTelefone(e.target.value))
-                    }
-                    invalido={Boolean(errors.telefone)}
-                    inputMode="tel"
-                  />
-                )}
-              />
-            </FormField>
-          </div>
+        <section className="rounded-lg border border-slate-800 bg-slate-900/40 p-3 text-xs text-slate-400">
+          <p className="font-medium text-slate-300">
+            Sobre dados de contato
+          </p>
+          <p className="mt-1">
+            Email e telefone agora vivem no <strong>UsuarioCliente</strong>{' '}
+            (holding) — não na loja. Após cadastrar a filial, vincule-a a uma
+            holding em "Usuários cliente" para liberar o portal e os disparos
+            da régua.
+          </p>
         </section>
 
         <section>

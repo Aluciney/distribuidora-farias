@@ -17,12 +17,12 @@ export function useLoginAdmin() {
 }
 
 export function useLoginCliente() {
-  const loginCliente = useAuthStore((s) => s.loginCliente);
+  const loginUsuarioCliente = useAuthStore((s) => s.loginUsuarioCliente);
   return useMutation({
     mutationFn: (payload: LoginClientePayload) =>
       authService.loginCliente(payload),
-    onSuccess: (cliente) => {
-      loginCliente(cliente.id);
+    onSuccess: (usuarioCliente) => {
+      loginUsuarioCliente(usuarioCliente);
     },
   });
 }

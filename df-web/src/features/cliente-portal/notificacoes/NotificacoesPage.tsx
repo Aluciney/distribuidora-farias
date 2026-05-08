@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Bell, BellOff, CheckCheck, ChevronRight } from 'lucide-react';
+import { Bell, BellOff, Building2, CheckCheck, ChevronRight } from 'lucide-react';
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import {
@@ -91,6 +91,12 @@ export function NotificacoesPage() {
                           {formatDateTime(n.criadoEm)}
                         </span>
                       </div>
+                      {n.filial && (
+                        <p className="mt-0.5 inline-flex items-center gap-1 rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-400">
+                          <Building2 className="h-3 w-3" />
+                          {n.filial.nomeFantasia ?? n.filial.razaoSocial}
+                        </p>
+                      )}
                       <p className="mt-1 text-xs text-slate-400">
                         {n.mensagem}
                       </p>

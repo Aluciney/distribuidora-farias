@@ -16,8 +16,6 @@ interface FaturaDTO {
     cnpj: string;
     razaoSocial: string;
     nomeFantasia: string | null;
-    email: string;
-    telefone: string;
   } | null;
   valor: number;
   valorPago: number | null;
@@ -71,8 +69,6 @@ function fromFaturaDTO(dto: FaturaDTO): Fatura {
           cnpj: dto.cliente.cnpj,
           razaoSocial: dto.cliente.razaoSocial,
           nomeFantasia: dto.cliente.nomeFantasia ?? undefined,
-          email: dto.cliente.email,
-          telefone: dto.cliente.telefone,
         }
       : undefined,
     valor: dto.valor,
@@ -113,6 +109,8 @@ function fromFaturaDTO(dto: FaturaDTO): Fatura {
 
 export interface FiltrosFaturasCliente {
   status?: StatusFatura;
+  /** Quando informado, filtra a uma única filial entre as acessíveis. */
+  filialId?: UUID;
   pagina?: number;
   porPagina?: number;
 }
@@ -129,6 +127,7 @@ export const faturasService = {
   async listar(filtros: FiltrosFaturasCliente = {}): Promise<ListagemFaturas> {
     const dto = await api.get<ListagemDTO>('/cliente/faturas', {
       status: filtros.status,
+      filialId: filtros.filialId,
       pagina: filtros.pagina,
       porPagina: filtros.porPagina,
     });

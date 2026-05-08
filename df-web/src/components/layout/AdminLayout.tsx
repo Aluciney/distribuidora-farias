@@ -15,6 +15,7 @@ import {
   X,
   LogOut,
   KeyRound,
+  Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { useUsuarioLogado } from '@/features/auth/hooks/useUsuarioLogado';
@@ -30,12 +31,13 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { to: '/admin', label: 'Fluxo de Caixa', icon: LayoutDashboard },
-  { to: '/admin/clientes', label: 'Clientes', icon: Users },
+  { to: '/admin/clientes', label: 'Filiais (lojas)', icon: Building2 },
+  { to: '/admin/usuarios-cliente', label: 'Usuários cliente', icon: Users },
   { to: '/admin/cobrancas', label: 'Cobranças', icon: Receipt },
   { to: '/admin/inadimplencia', label: 'Inadimplência', icon: AlertTriangle },
   { to: '/admin/regua-cobranca', label: 'Régua de Cobrança', icon: Workflow },
   { to: '/admin/whatsapp', label: 'WhatsApp', icon: MessageCircle },
-  { to: '/admin/usuarios', label: 'Usuários', icon: ShieldCheck },
+  { to: '/admin/usuarios', label: 'Equipe interna', icon: ShieldCheck },
   { to: '/admin/produtos', label: 'Produtos', icon: Boxes },
   { to: '/admin/configuracoes', label: 'Configurações', icon: Settings2 },
 ];
@@ -43,7 +45,6 @@ const NAV_ITEMS: NavItem[] = [
 const PERFIL_LABEL: Record<PerfilUsuario, string> = {
   [PerfilUsuario.ADMIN]: 'Administrador',
   [PerfilUsuario.FINANCEIRO]: 'Financeiro',
-  [PerfilUsuario.CLIENTE]: 'Cliente',
 };
 
 function iniciais(nome: string): string {

@@ -8,33 +8,36 @@ import {
   useEsqueciSenha,
   useRedefinirSenha,
 } from '@/features/auth/hooks/useSenha';
-import { apenasDigitos, maskCNPJ } from '@/utils/cnpj';
 
-type Tipo = 'ADMIN' | 'CLIENTE';
+type Tipo = 'ADMIN' | 'USUARIO_CLIENTE';
 
 interface EsqueciSenhaModalProps {
   aberto: boolean;
   onFechar: () => void;
   /** Pré-seleciona o tipo conforme a aba aberta no LoginPage. */
   tipoInicial?: Tipo;
-  /** Pré-preenche o identificador (email/CNPJ) digitado no LoginPage. */
-  identificadorInicial?: string;
+  /** Pré-preenche o email digitado no LoginPage. */
+  emailInicial?: string;
   /** Disparado após sucesso da redefinição — útil para fechar o modal. */
   onSucesso?: () => void;
 }
 
 type Etapa = 'solicitar' | 'redefinir';
 
+function apenasDigitos(v: string): string {
+  return v.replace(/\D/g, '');
+}
+
 export function EsqueciSenhaModal({
   aberto,
   onFechar,
-  tipoInicial = 'CLIENTE',
-  identificadorInicial = '',
+  tipoInicial = 'USUARIO_CLIENTE',
+  emailInicial = '',
   onSucesso,
 }: EsqueciSenhaModalProps) {
   const [etapa, setEtapa] = useState<Etapa>('solicitar');
   const [tipo, setTipo] = useState<Tipo>(tipoInicial);
-  const [identificador, setIdentificador] = useState(identificadorInicial);
+  const [email, setEmail] = useState(emailInicial);
   const [destinatarioMascarado, setDestinatarioMascarado] = useState<
     string | null
   >(null);
@@ -50,37 +53,25 @@ export function EsqueciSenhaModal({
     if (aberto) {
       setEtapa('solicitar');
       setTipo(tipoInicial);
-      setIdentificador(identificadorInicial);
+      setEmail(emailInicial);
       setDestinatarioMascarado(null);
       setCodigo('');
       setSenhaNova('');
       setConfirmar('');
       setErro(null);
     }
-  }, [aberto, tipoInicial, identificadorInicial]);
-
-  function formatarIdentificador(valor: string): string {
-    return tipo === 'CLIENTE' ? maskCNPJ(valor) : valor;
-  }
+  }, [aberto, tipoInicial, emailInicial]);
 
   async function solicitar() {
     setErro(null);
-    if (tipo === 'CLIENTE') {
-      if (apenasDigitos(identificador).length !== 14) {
-        setErro('Informe um CNPJ válido (14 dígitos).');
-        return;
-      }
-    } else {
-      if (!/^\S+@\S+\.\S+$/.test(identificador)) {
-        setErro('Informe um email válido.');
-        return;
-      }
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      setErro('Informe um email válido.');
+      return;
     }
     try {
       const res = await esqueci.mutateAsync({
         tipo,
-        identificador:
-          tipo === 'CLIENTE' ? apenasDigitos(identificador) : identificador.trim(),
+        email: email.trim().toLowerCase(),
       });
       setDestinatarioMascarado(res.destinatario);
       setEtapa('redefinir');
@@ -106,8 +97,7 @@ export function EsqueciSenhaModal({
     try {
       await redefinir.mutateAsync({
         tipo,
-        identificador:
-          tipo === 'CLIENTE' ? apenasDigitos(identificador) : identificador.trim(),
+        email: email.trim().toLowerCase(),
         codigo: apenasDigitos(codigo),
         senhaNova,
       });
@@ -158,16 +148,13 @@ export function EsqueciSenhaModal({
       {etapa === 'solicitar' ? (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-1 rounded-lg border border-slate-800 bg-slate-900 p-1">
-            {(['CLIENTE', 'ADMIN'] as Tipo[]).map((t) => {
+            {(['USUARIO_CLIENTE', 'ADMIN'] as Tipo[]).map((t) => {
               const ativo = tipo === t;
               return (
                 <button
                   key={t}
                   type="button"
-                  onClick={() => {
-                    setTipo(t);
-                    setIdentificador('');
-                  }}
+                  onClick={() => setTipo(t)}
                   className={`rounded-md px-3 py-2 text-xs font-medium transition-colors ${
                     ativo
                       ? t === 'ADMIN'
@@ -183,21 +170,19 @@ export function EsqueciSenhaModal({
           </div>
 
           <FormField
-            label={tipo === 'CLIENTE' ? 'CNPJ' : 'Email'}
-            htmlFor="identificador"
+            label="Email"
+            htmlFor="esqueci-email"
             obrigatorio
             erro={erro ?? undefined}
           >
             <Input
-              id="identificador"
-              value={formatarIdentificador(identificador)}
-              onChange={(e) => setIdentificador(e.target.value)}
-              placeholder={
-                tipo === 'CLIENTE' ? '00.000.000/0000-00' : 'voce@empresa.com'
-              }
-              type={tipo === 'CLIENTE' ? 'text' : 'email'}
-              inputMode={tipo === 'CLIENTE' ? 'numeric' : 'email'}
-              autoComplete={tipo === 'CLIENTE' ? 'off' : 'email'}
+              id="esqueci-email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="seu@email.com"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
               invalido={Boolean(erro)}
             />
           </FormField>
