@@ -30,7 +30,10 @@
       "Bash(echo \"Exit mobile: $?\")",
       "Bash(echo \"EXITCODE=$?\")",
       "Bash(npx vite *)",
-      "Bash(xargs grep -l \"PDF\\\\|Print\\\\|download\\\\|share\\\\|Share\\\\|FileSystem\")"
+      "Bash(xargs grep -l \"PDF\\\\|Print\\\\|download\\\\|share\\\\|Share\\\\|FileSystem\")",
+      "Bash(git stash *)",
+      "Bash(npx biome *)",
+      "Bash(npx eslint *)"
     ]
   }
 }

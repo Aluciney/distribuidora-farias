@@ -15,6 +15,7 @@ export const novaCobrancaSchema = z.object({
   dataVencimento: dataObrigatoria,
   observacoes: z.string().optional().or(z.literal('')),
   enviarBoletoWhatsapp: z.boolean(),
+  enviarBoletoEmail: z.boolean(),
 });
 export type NovaCobrancaFormValues = z.infer<typeof novaCobrancaSchema>;
 

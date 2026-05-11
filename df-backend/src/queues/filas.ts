@@ -5,6 +5,7 @@ import { getRedisConnection } from './redis'
 export const NOME_FILA_REGUA = 'regua'
 export const NOME_FILA_NOTIFICACOES = 'notificacoes'
 export const NOME_FILA_WHATSAPP_BOLETO = 'whatsapp-boleto'
+export const NOME_FILA_EMAIL_BOLETO = 'email-boleto'
 
 export const ID_JOB_REGUA_AGENDADO = 'regua-agendada'
 
@@ -35,9 +36,18 @@ export interface DadosJobWhatsappBoleto {
 	destinatario: string
 }
 
+/** Envio manual do boleto em PDF anexo via e-mail. Mesmo padrão do WhatsApp:
+ *  o worker regenera o PDF a partir do `faturaId` para não trafegar bytes
+ *  pelo Redis. */
+export interface DadosJobEmailBoleto {
+	faturaId: string
+	destinatario: string
+}
+
 let filaRegua: Queue<DadosJobRegua> | null = null
 let filaNotificacoes: Queue<DadosJobNotificacao> | null = null
 let filaWhatsappBoleto: Queue<DadosJobWhatsappBoleto> | null = null
+let filaEmailBoleto: Queue<DadosJobEmailBoleto> | null = null
 
 export function getFilaRegua(): Queue<DadosJobRegua> {
 	if (!filaRegua) {
@@ -84,6 +94,21 @@ export function getFilaWhatsappBoleto(): Queue<DadosJobWhatsappBoleto> {
 	return filaWhatsappBoleto
 }
 
+export function getFilaEmailBoleto(): Queue<DadosJobEmailBoleto> {
+	if (!filaEmailBoleto) {
+		filaEmailBoleto = new Queue<DadosJobEmailBoleto>(NOME_FILA_EMAIL_BOLETO, {
+			connection: getRedisConnection(),
+			defaultJobOptions: {
+				attempts: 5,
+				backoff: { type: 'exponential', delay: 10_000 },
+				removeOnComplete: { age: 60 * 60 * 24, count: 500 },
+				removeOnFail: { age: 60 * 60 * 24 * 14 },
+			},
+		})
+	}
+	return filaEmailBoleto
+}
+
 export async function fecharFilas(): Promise<void> {
 	if (filaRegua) {
 		await filaRegua.close()
@@ -96,5 +121,9 @@ export async function fecharFilas(): Promise<void> {
 	if (filaWhatsappBoleto) {
 		await filaWhatsappBoleto.close()
 		filaWhatsappBoleto = null
+	}
+	if (filaEmailBoleto) {
+		await filaEmailBoleto.close()
+		filaEmailBoleto = null
 	}
 }

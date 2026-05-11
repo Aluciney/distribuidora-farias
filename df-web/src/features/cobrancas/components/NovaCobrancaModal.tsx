@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Banknote, MessageSquare, QrCode, Settings2 } from 'lucide-react';
+import { Banknote, Mail, MessageSquare, QrCode, Settings2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -13,6 +13,7 @@ import { FormField } from '@/components/ui/FormField';
 import { usePedidosFaturaveis } from '@/features/cobrancas/hooks/usePedidos';
 import {
   useCriarCobranca,
+  useEnviarBoletoEmail,
   useEnviarBoletoWhatsapp,
 } from '@/features/cobrancas/hooks/useCobrancas';
 import {
@@ -39,6 +40,7 @@ export function NovaCobrancaModal({ aberto, onFechar }: NovaCobrancaModalProps) 
   const { data: pedidos, isLoading: pedidosLoading } = usePedidosFaturaveis();
   const criar = useCriarCobranca();
   const enviarWhatsapp = useEnviarBoletoWhatsapp();
+  const enviarEmail = useEnviarBoletoEmail();
   const { data: config } = useConfiguracoes();
   const { data: whatsappInfo } = useStatusWhatsapp();
   const configOk = configuracoesProntas(config ?? CONFIG_PADRAO);
@@ -59,6 +61,7 @@ export function NovaCobrancaModal({ aberto, onFechar }: NovaCobrancaModalProps) 
       dataVencimento: dataPadraoVencimento(),
       observacoes: '',
       enviarBoletoWhatsapp: true,
+      enviarBoletoEmail: true,
     },
   });
 
@@ -84,6 +87,7 @@ export function NovaCobrancaModal({ aberto, onFechar }: NovaCobrancaModalProps) 
         dataVencimento: dataPadraoVencimento(),
         observacoes: '',
         enviarBoletoWhatsapp: true,
+        enviarBoletoEmail: true,
       });
     }
   }, [aberto, reset]);
@@ -104,11 +108,21 @@ export function NovaCobrancaModal({ aberto, onFechar }: NovaCobrancaModalProps) 
         // toast de erro já é exibido pelo hook; mantém a fatura criada.
       }
     }
+    if (valores.enviarBoletoEmail) {
+      try {
+        await enviarEmail.mutateAsync(fatura.id);
+      } catch {
+        // toast de erro já é exibido pelo hook; mantém a fatura criada.
+      }
+    }
     onFechar();
   });
 
   const carregando =
-    isSubmitting || criar.isPending || enviarWhatsapp.isPending;
+    isSubmitting ||
+    criar.isPending ||
+    enviarWhatsapp.isPending ||
+    enviarEmail.isPending;
 
   return (
     <Modal
@@ -273,6 +287,21 @@ export function NovaCobrancaModal({ aberto, onFechar }: NovaCobrancaModalProps) 
             disabled={!whatsappConectado}
             {...register('enviarBoletoWhatsapp')}
           />
+        </div>
+
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+          <div className="flex items-start gap-2">
+            <Mail className="mt-0.5 h-4 w-4 flex-none text-sky-300" />
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium text-slate-200">
+                Enviar boleto por e-mail do cliente
+              </p>
+              <p className="text-xs text-slate-500">
+                O PDF será anexado e enviado ao e-mail da holding responsável.
+              </p>
+            </div>
+          </div>
+          <Switch {...register('enviarBoletoEmail')} />
         </div>
       </form>
     </Modal>

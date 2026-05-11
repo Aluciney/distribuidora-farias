@@ -62,10 +62,7 @@ export function serializarFatura(f: Fatura & { cliente?: Cliente | null }) {
 							: null,
 				}
 			: null,
-		cancelamento:
-			f.canceladoEm && f.motivoCancelamento
-				? { motivo: f.motivoCancelamento, canceladoEm: f.canceladoEm.toISOString() }
-				: null,
+		cancelamento: f.canceladoEm && f.motivoCancelamento ? { motivo: f.motivoCancelamento, canceladoEm: f.canceladoEm.toISOString() } : null,
 		criadoEm: f.criadoEm.toISOString(),
 		atualizadoEm: f.atualizadoEm.toISOString(),
 	}
@@ -176,10 +173,7 @@ export async function rotasCobrancasAdmin(app: FastifyInstance) {
 		},
 		async (req, reply) => {
 			const { buffer, nomeArquivo } = await service.gerarPdfBoleto(req.params.id)
-			return reply
-				.type('application/pdf')
-				.header('Content-Disposition', `inline; filename="${nomeArquivo}"`)
-				.send(buffer)
+			return reply.type('application/pdf').header('Content-Disposition', `inline; filename="${nomeArquivo}"`).send(buffer)
 		},
 	)
 
@@ -205,6 +199,32 @@ export async function rotasCobrancasAdmin(app: FastifyInstance) {
 		},
 		async (req) => {
 			const r = await service.enviarBoletoWhatsapp(req.params.id)
+			return { ok: true as const, ...r }
+		},
+	)
+
+	a.post(
+		'/:id/enviar-email',
+		{
+			schema: {
+				tags: ['Cobranças'],
+				summary: 'Envia o boleto em PDF anexo via e-mail',
+				security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+				params: z.object({ id: z.string().uuid() }),
+				response: {
+					200: z.object({
+						ok: z.literal(true),
+						enviadoEm: z.string().datetime(),
+						destinatario: z.string(),
+					}),
+					404: erroSchema,
+					422: erroSchema,
+				},
+			},
+			preHandler: guard,
+		},
+		async (req) => {
+			const r = await service.enviarBoletoEmail(req.params.id)
 			return { ok: true as const, ...r }
 		},
 	)
@@ -305,14 +325,8 @@ export async function rotasCobrancasCliente(app: FastifyInstance) {
 		},
 		async (req, reply) => {
 			const acessiveis = await obterClientesAcessiveis(app.prisma, req.sessao.sub)
-			const { buffer, nomeArquivo } = await service.gerarPdfBoletoParaUsuarioCliente(
-				req.params.id,
-				acessiveis,
-			)
-			return reply
-				.type('application/pdf')
-				.header('Content-Disposition', `inline; filename="${nomeArquivo}"`)
-				.send(buffer)
+			const { buffer, nomeArquivo } = await service.gerarPdfBoletoParaUsuarioCliente(req.params.id, acessiveis)
+			return reply.type('application/pdf').header('Content-Disposition', `inline; filename="${nomeArquivo}"`).send(buffer)
 		},
 	)
 

@@ -142,6 +142,14 @@ export const cobrancasService = {
     );
   },
 
+  async enviarBoletoEmail(
+    id: UUID,
+  ): Promise<{ ok: true; enviadoEm: string; destinatario: string }> {
+    return api.post<{ ok: true; enviadoEm: string; destinatario: string }>(
+      `/admin/cobrancas/${id}/enviar-email`,
+    );
+  },
+
   /** Baixa o PDF do boleto gerado pelo backend (mesmo padrão usado pelo
    *  envio via WhatsApp). Retorna o Blob e o nome de arquivo sugerido. */
   async baixarPdf(id: UUID): Promise<{ blob: Blob; nomeArquivo: string }> {

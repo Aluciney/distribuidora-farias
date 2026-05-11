@@ -4,6 +4,7 @@ import { env } from '../env'
 import { whatsappService } from '../modules/whatsapp/whatsapp.service'
 import { fecharFilas } from './filas'
 import { closeRedisConnection } from './redis'
+import { iniciarEmailBoletoWorker } from './workers/email-boleto.worker'
 import { iniciarNotificacoesWorker } from './workers/notificacoes.worker'
 import { iniciarReguaWorker } from './workers/regua.worker'
 import { iniciarWhatsappBoletoWorker } from './workers/whatsapp-boleto.worker'
@@ -29,6 +30,10 @@ export async function bootstrapWorkers(app: FastifyInstance): Promise<void> {
 	const notificacoesWorker = iniciarNotificacoesWorker(app.prisma, app.log)
 	workers.push(notificacoesWorker)
 	app.log.info('🛠️  Worker de notificações iniciado')
+
+	const emailBoletoWorker = iniciarEmailBoletoWorker(app.prisma, app.log)
+	workers.push(emailBoletoWorker)
+	app.log.info('🛠️  Worker de e-mail (boleto) iniciado')
 
 	if (env.REGUA_HABILITADA) {
 		const reguaWorker = await iniciarReguaWorker(app.prisma, app.log)

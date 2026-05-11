@@ -120,6 +120,21 @@ export function useEnviarBoletoWhatsapp() {
   });
 }
 
+export function useEnviarBoletoEmail() {
+  return useMutation({
+    mutationFn: (id: UUID) => cobrancasService.enviarBoletoEmail(id),
+    onSuccess: () => {
+      toast.sucesso(
+        'Boleto enviado',
+        'O cliente receberá o PDF anexo por e-mail.',
+      );
+    },
+    onError: (err: Error) => {
+      toast.erro('Falha ao enviar por e-mail', err.message);
+    },
+  });
+}
+
 export function useCancelarFatura() {
   const qc = useQueryClient();
   return useMutation({

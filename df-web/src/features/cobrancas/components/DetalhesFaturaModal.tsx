@@ -1,17 +1,15 @@
-import { Banknote, Download, MessageSquare, QrCode } from 'lucide-react';
+import { useState } from 'react';
+import { Banknote, Download, QrCode, Send } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { BoletoBarcode } from '@/components/ui/BoletoBarcode';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { PixQrCode } from '@/components/ui/PixQrCode';
-import {
-  useBaixarPdfBoleto,
-  useEnviarBoletoWhatsapp,
-} from '@/features/cobrancas/hooks/useCobrancas';
+import { useBaixarPdfBoleto } from '@/features/cobrancas/hooks/useCobrancas';
 import { useUsuarioLogado } from '@/features/auth/hooks/useUsuarioLogado';
-import { useStatusWhatsapp } from '@/features/whatsapp/hooks/useWhatsapp';
 import { MetodoPagamento, PerfilUsuario, StatusFatura, type Fatura } from '@/types';
+import { ReenviarBoletoModal } from './ReenviarBoletoModal';
 import {
   formatCNPJ,
   formatCurrency,
@@ -58,9 +56,8 @@ export function DetalhesFaturaModal({
   onCancelarFatura,
 }: DetalhesFaturaModalProps) {
   const { data: usuarioLogado } = useUsuarioLogado();
-  const { data: whatsappInfo } = useStatusWhatsapp();
-  const enviarWhatsapp = useEnviarBoletoWhatsapp();
   const baixarPdf = useBaixarPdfBoleto();
+  const [reenvioAberto, setReenvioAberto] = useState(false);
 
   if (!fatura) {
     return (
@@ -75,8 +72,7 @@ export function DetalhesFaturaModal({
     fatura.status === StatusFatura.VENCIDO;
   const podeCancelar = podeBaixar; // mesma condição: pendentes ou vencidas
   const isAdmin = usuarioLogado?.perfil === PerfilUsuario.ADMIN;
-  const whatsappConectado = whatsappInfo?.status === 'conectado';
-  const podeReenviarWhatsapp = isAdmin && podeBaixar;
+  const podeReenviar = isAdmin && podeBaixar;
 
   return (
     <Modal
@@ -87,21 +83,14 @@ export function DetalhesFaturaModal({
       tamanho="lg"
       acoesCabecalho={
         <>
-          {podeReenviarWhatsapp && (
+          {podeReenviar && (
             <Button
               variant="outline"
               size="sm"
-              loading={enviarWhatsapp.isPending}
-              disabled={!whatsappConectado || enviarWhatsapp.isPending}
-              title={
-                whatsappConectado
-                  ? undefined
-                  : 'WhatsApp desconectado. Conecte em Configurações → WhatsApp.'
-              }
-              onClick={() => enviarWhatsapp.mutate(fatura.id)}
+              onClick={() => setReenvioAberto(true)}
             >
-              <MessageSquare className="h-4 w-4" />
-              Reenviar pelo WhatsApp
+              <Send className="h-4 w-4" />
+              Reenviar boleto
             </Button>
           )}
           <Button
@@ -283,6 +272,13 @@ export function DetalhesFaturaModal({
           </div>
         )}
       </div>
+
+      {reenvioAberto && (
+        <ReenviarBoletoModal
+          onFechar={() => setReenvioAberto(false)}
+          fatura={fatura}
+        />
+      )}
     </Modal>
   );
 }
