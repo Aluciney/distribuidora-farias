@@ -1,4 +1,5 @@
 import type { Cliente, ConfiguracoesCobranca, Fatura } from '@prisma/client'
+import bwipjs from 'bwip-js'
 import PDFDocument from 'pdfkit'
 import QRCode from 'qrcode'
 
@@ -23,6 +24,10 @@ export async function gerarBoletoPdf(input: GerarPdfInput): Promise<Buffer> {
 		errorCorrectionLevel: 'M',
 		color: { dark: '#000000', light: '#FFFFFF' },
 	})
+
+	// Código de barras Febraban — 44 dígitos em "Interleaved 2 of 5" (ITF), o
+	// formato lido pelos leitores de boleto bancário. O PNG é embutido no PDF.
+	const codigoBarrasPng = await gerarCodigoBarrasFebraban(fatura.boletoCodigoBarras)
 
 	return new Promise<Buffer>((resolve, reject) => {
 		const doc = new PDFDocument({ size: 'A4', margin: 50 })
@@ -63,8 +68,16 @@ export async function gerarBoletoPdf(input: GerarPdfInput): Promise<Buffer> {
 			.text('LINHA DIGITÁVEL', { continued: false })
 		doc.fillColor(COR_TEXTO).font('Courier').fontSize(11).text(fatura.boletoLinhaDigitavel)
 		doc.font('Helvetica')
-		doc.moveDown(0.5)
-		doc.fillColor(COR_LABEL).fontSize(8).text(`Código de barras: ${fatura.boletoCodigoBarras}`)
+		doc.moveDown(0.6)
+
+		// Barcode renderizado como imagem ocupando a largura útil da página.
+		// Altura fixa em 55pt — leitores ópticos exigem barras altas o
+		// suficiente para tolerar leitura inclinada.
+		const larguraUtil = doc.page.width - 100
+		doc.image(codigoBarrasPng, 50, doc.y, { width: larguraUtil, height: 55 })
+		doc.y += 60
+		doc.x = 50
+		doc.fillColor(COR_LABEL).fontSize(8).text(fatura.boletoCodigoBarras, { align: 'center' })
 
 		desenharLinha(doc)
 
@@ -129,4 +142,21 @@ function formatarValor(centavos: number): string {
 	const partes = reais.split(',')
 	const inteiro = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 	return `R$ ${inteiro},${partes[1]}`
+}
+
+async function gerarCodigoBarrasFebraban(codigo: string): Promise<Buffer> {
+	const apenasDigitos = codigo.replace(/\D/g, '')
+	// ITF exige número par de dígitos. Febraban (44) já é par, mas blindamos.
+	const texto = apenasDigitos.length % 2 === 0 ? apenasDigitos : `0${apenasDigitos}`
+
+	return bwipjs.toBuffer({
+		bcid: 'interleaved2of5',
+		text: texto,
+		scale: 2,
+		height: 14,
+		includetext: false,
+		paddingwidth: 0,
+		paddingheight: 0,
+		backgroundcolor: 'ffffff',
+	})
 }

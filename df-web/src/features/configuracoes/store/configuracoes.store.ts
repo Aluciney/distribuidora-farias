@@ -54,6 +54,8 @@ export interface EncargosCobranca {
 export interface ConfiguracoesWhatsapp {
   /** Texto enviado junto com o boleto. Suporta placeholders. */
   mensagemBoleto?: string;
+  /** Texto disparado quando a fatura é marcada como paga (todos os canais). */
+  mensagemConfirmacao?: string;
 }
 
 export interface ConfiguracoesCobranca {
@@ -66,6 +68,9 @@ export interface ConfiguracoesCobranca {
 
 export const MENSAGEM_WHATSAPP_BOLETO_PADRAO =
   'Olá, {cliente}! Segue o boleto da fatura {numero} no valor de {valor}, com vencimento em {vencimento}.\n\nLinha digitável: {linhaDigitavel}\nPIX: {pix}';
+
+export const MENSAGEM_WHATSAPP_CONFIRMACAO_PADRAO =
+  'Olá, {cliente}.\n\nRecebemos o pagamento da fatura {numero} no valor de {valor} via {metodo}{detalhe} em {data}.\n\nObrigado pela parceria.';
 
 // ---------------------------------------------------------------------------
 // Catálogo de bancos suportados (subset Febraban)
@@ -135,6 +140,7 @@ export const CONFIG_PADRAO: ConfiguracoesCobranca = {
   },
   whatsapp: {
     mensagemBoleto: MENSAGEM_WHATSAPP_BOLETO_PADRAO,
+    mensagemConfirmacao: MENSAGEM_WHATSAPP_CONFIRMACAO_PADRAO,
   },
 };
 

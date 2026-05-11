@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -8,26 +9,23 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Mail, Wallet } from 'lucide-react-native';
+import { Mail } from 'lucide-react-native';
 import { Button } from '@/components/Button';
 import { Card, CardBody } from '@/components/Card';
 import { FormField } from '@/components/FormField';
 import { Input } from '@/components/Input';
 import { EsqueciSenhaModal } from '@/features/auth/EsqueciSenhaModal';
-import {
-  authService,
-  EMAIL_DEMO,
-  SENHA_DEMO,
-} from '@/features/auth/auth.service';
+import { authService } from '@/features/auth/auth.service';
 import { useAuthStore } from '@/store/auth.store';
 import { toast } from '@/store/toast.store';
+import Logo from '@/assets/logo.png'
 
 export default function LoginScreen() {
   const loginUsuarioCliente = useAuthStore((s) => s.loginUsuarioCliente);
   const insets = useSafeAreaInsets();
 
-  const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
+  const [email, setEmail] = useState('contato@atacadonorte.com.br');
+  const [senha, setSenha] = useState('df2026');
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [esqueciAberto, setEsqueciAberto] = useState(false);
@@ -56,12 +54,6 @@ export default function LoginScreen() {
     }
   }
 
-  function preencherDemo() {
-    setEmail(EMAIL_DEMO);
-    setSenha(SENHA_DEMO);
-    setErro(null);
-  }
-
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: '#020617' }}
@@ -78,7 +70,8 @@ export default function LoginScreen() {
       >
         <View className="flex-1 justify-center gap-6">
           <View className="items-center gap-3">
-            <View className="h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10">
+            <Image source={Logo} className="w-44 h-28" />
+            {/* <View className="h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10">
               <Wallet size={32} color="#34d399" />
             </View>
             <View className="items-center">
@@ -88,7 +81,7 @@ export default function LoginScreen() {
               <Text className="mt-1 text-xs text-slate-500">
                 Distribuidora Farias
               </Text>
-            </View>
+            </View> */}
           </View>
 
           <Card>
@@ -145,20 +138,6 @@ export default function LoginScreen() {
                   Esqueceu sua senha?
                 </Text>
               </Pressable>
-
-              <View className="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
-                <Text className="text-xs font-semibold text-slate-300">
-                  Modo demonstração
-                </Text>
-                <Text className="mt-1 text-xs text-slate-400">
-                  Holding "Grupo Central" (rede com 2 filiais).
-                </Text>
-                <Pressable onPress={preencherDemo} className="mt-2 self-start">
-                  <Text className="text-xs text-emerald-300 active:text-emerald-200">
-                    Preencher credenciais demo
-                  </Text>
-                </Pressable>
-              </View>
             </CardBody>
           </Card>
         </View>

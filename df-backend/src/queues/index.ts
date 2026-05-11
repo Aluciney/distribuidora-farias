@@ -6,6 +6,7 @@ import { fecharFilas } from './filas'
 import { closeRedisConnection } from './redis'
 import { iniciarNotificacoesWorker } from './workers/notificacoes.worker'
 import { iniciarReguaWorker } from './workers/regua.worker'
+import { iniciarWhatsappBoletoWorker } from './workers/whatsapp-boleto.worker'
 
 let workers: Worker[] = []
 
@@ -19,6 +20,10 @@ export async function bootstrapWorkers(app: FastifyInstance): Promise<void> {
 			error: (...a) => app.log.error({ src: 'whatsapp' }, a.map(String).join(' ')),
 		})
 		whatsappService.iniciar().catch((err) => app.log.error({ err }, 'Falha ao iniciar WhatsApp'))
+
+		const whatsappBoletoWorker = iniciarWhatsappBoletoWorker(app.prisma, app.log)
+		workers.push(whatsappBoletoWorker)
+		app.log.info('🛠️  Worker de WhatsApp (boleto) iniciado')
 	}
 
 	const notificacoesWorker = iniciarNotificacoesWorker(app.prisma, app.log)

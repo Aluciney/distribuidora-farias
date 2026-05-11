@@ -39,6 +39,7 @@ export const configuracoesSchema = z.object({
 	}),
 	whatsapp: z.object({
 		mensagemBoleto: z.string().nullable(),
+		mensagemConfirmacao: z.string().nullable(),
 	}),
 	atualizadoEm: z.string().datetime(),
 })
@@ -81,6 +82,7 @@ export const atualizarConfiguracoesInputSchema = z.object({
 	whatsapp: z
 		.object({
 			mensagemBoleto: z.string().max(2000).nullish(),
+			mensagemConfirmacao: z.string().max(2000).nullish(),
 		})
 		.optional(),
 })

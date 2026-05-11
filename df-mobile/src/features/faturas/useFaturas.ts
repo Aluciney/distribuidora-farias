@@ -33,6 +33,11 @@ export function useFatura(id: UUID | undefined) {
     queryKey: [...KEY, 'detalhe', id],
     queryFn: () => faturasService.obter(id!),
     enabled: Boolean(id),
+    // O QueryClient global tem staleTime de 30s — bom para a listagem, ruim
+    // pra detalhe: se o admin der baixa enquanto o usuário está na tela, o
+    // valor mostrado fica defasado. No detalhe queremos dado fresco sempre.
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 }
 

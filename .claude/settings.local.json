@@ -29,7 +29,8 @@
       "Bash(echo \"Exit back: $?\")",
       "Bash(echo \"Exit mobile: $?\")",
       "Bash(echo \"EXITCODE=$?\")",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(xargs grep -l \"PDF\\\\|Print\\\\|download\\\\|share\\\\|Share\\\\|FileSystem\")"
     ]
   }
 }

@@ -19,6 +19,10 @@ const METODO_LABEL: Record<MetodoPagamento, string> = {
 	DINHEIRO: 'dinheiro',
 }
 
+/** Fallback quando o admin ainda não personalizou o texto. */
+export const MENSAGEM_CONFIRMACAO_PADRAO =
+	'Olá, {cliente}.\n\nRecebemos o pagamento da fatura {numero} no valor de {valor} via {metodo}{detalhe} em {data}.\n\nObrigado pela parceria.'
+
 export interface ConfirmacaoInput {
 	fatura: Fatura
 	cliente: Cliente
@@ -45,7 +49,14 @@ export class ConfirmacaoNotificador {
 
 	async notificar(input: ConfirmacaoInput): Promise<void> {
 		const titulo = 'Pagamento confirmado'
-		const corpo = montarMensagem(input)
+		const config = await this.db.configuracoesCobranca.findUnique({
+			where: { id: 'unica' },
+			select: { whatsappMensagemConfirmacao: true },
+		})
+		const corpo = montarMensagem(
+			input,
+			config?.whatsappMensagemConfirmacao ?? MENSAGEM_CONFIRMACAO_PADRAO,
+		)
 
 		const responsaveis = await obterResponsaveisDoCliente(this.db, input.cliente.id)
 
@@ -92,19 +103,31 @@ export class ConfirmacaoNotificador {
 			})
 			.catch(() => undefined)
 
-		// 3. Email + WhatsApp — um envio por holding ativa.
+		// 3. Email + WhatsApp — um envio por DESTINATÁRIO único. Quando a
+		// mesma pessoa está cadastrada como holding em mais de uma filial
+		// (ou duas holdings compartilham telefone/email), o loop ingênuo por
+		// `responsaveis` mandava a mesma mensagem várias vezes pro mesmo
+		// número. Deduplica antes de disparar.
+		const emailsEnviados = new Set<string>()
+		const telefonesEnviados = new Set<string>()
+
 		for (const u of responsaveis) {
 			if (u.email) {
-				void this.email
-					.enviar({
-						destinatario: u.email,
-						assunto: `Pagamento confirmado — Fatura ${input.fatura.numero}`,
-						mensagem: corpo,
-					})
-					.catch((err) => console.warn('[confirmacao] falha no email:', err))
+				const email = u.email.trim().toLowerCase()
+				if (email && !emailsEnviados.has(email)) {
+					emailsEnviados.add(email)
+					void this.email
+						.enviar({
+							destinatario: email,
+							assunto: `Pagamento confirmado — Fatura ${input.fatura.numero}`,
+							mensagem: corpo,
+						})
+						.catch((err) => console.warn('[confirmacao] falha no email:', err))
+				}
 			}
 			const tel = u.telefone?.replace(/\D/g, '') ?? ''
-			if (tel.length >= 10) {
+			if (tel.length >= 10 && !telefonesEnviados.has(tel)) {
+				telefonesEnviados.add(tel)
 				void this.whatsapp
 					.enviar({ destinatario: tel, mensagem: corpo })
 					.catch((err) => console.warn('[confirmacao] falha no whatsapp:', err))
@@ -113,18 +136,19 @@ export class ConfirmacaoNotificador {
 	}
 }
 
-function montarMensagem(input: ConfirmacaoInput): string {
-	const valor = formatarBrl(input.fatura.valor)
-	const data = formatarData(input.dataPagamento)
-	const metodo = METODO_LABEL[input.metodo] ?? input.metodo
-	const detalhe = input.detalhe ? ` (${input.detalhe})` : ''
-	return [
-		`Olá, ${input.cliente.razaoSocial}.`,
-		'',
-		`Recebemos o pagamento da fatura ${input.fatura.numero} no valor de ${valor} via ${metodo}${detalhe} em ${data}.`,
-		'',
-		'Obrigado pela parceria — Distribuidora Farias.',
-	].join('\n')
+function montarMensagem(input: ConfirmacaoInput, template: string): string {
+	const placeholders: Record<string, string> = {
+		'{cliente}': input.cliente.razaoSocial,
+		'{numero}': input.fatura.numero,
+		'{valor}': formatarBrl(input.fatura.valor),
+		'{metodo}': METODO_LABEL[input.metodo] ?? input.metodo,
+		'{data}': formatarData(input.dataPagamento),
+		'{detalhe}': input.detalhe ? ` (${input.detalhe})` : '',
+	}
+	return Object.entries(placeholders).reduce(
+		(acc, [chave, valor]) => acc.split(chave).join(valor),
+		template,
+	)
 }
 
 function formatarBrl(centavos: number): string {

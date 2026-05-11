@@ -10,6 +10,8 @@ interface ModalProps {
   descricao?: string;
   children: ReactNode;
   rodape?: ReactNode;
+  /** Ações rápidas exibidas no cabeçalho, à esquerda do botão de fechar. */
+  acoesCabecalho?: ReactNode;
   /** Largura máxima do diálogo. */
   tamanho?: 'sm' | 'md' | 'lg' | 'xl';
 }
@@ -28,6 +30,7 @@ export function Modal({
   descricao,
   children,
   rodape,
+  acoesCabecalho,
   tamanho = 'md',
 }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -78,14 +81,21 @@ export function Modal({
               <p className="mt-0.5 text-xs text-slate-400">{descricao}</p>
             )}
           </div>
-          <button
-            type="button"
-            className="rounded-md p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-            onClick={onFechar}
-            aria-label="Fechar"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            {acoesCabecalho && (
+              <div className="flex flex-wrap items-center gap-2">
+                {acoesCabecalho}
+              </div>
+            )}
+            <button
+              type="button"
+              className="rounded-md p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+              onClick={onFechar}
+              aria-label="Fechar"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         <div className="max-h-[70vh] overflow-y-auto px-5 py-4">{children}</div>

@@ -1,4 +1,5 @@
-import { api } from '@/services/http';
+import * as FileSystem from 'expo-file-system/legacy';
+import { api, baseURL, obterToken } from '@/services/http';
 import type {
   Fatura,
   ListagemFaturas,
@@ -158,5 +159,24 @@ export const faturasService = {
       payload,
     );
     return fromFaturaDTO(dto);
+  },
+
+  /** Baixa o PDF do boleto e grava em disco no diretório do app. Retorna o
+   *  URI local que pode ser passado para `Sharing.shareAsync`. */
+  async baixarPdf(id: UUID, nomeArquivoSugerido?: string): Promise<string> {
+    const token = obterToken();
+    if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+
+    const destino =
+      FileSystem.documentDirectory + (nomeArquivoSugerido ?? `boleto-${id}.pdf`);
+    const resultado = await FileSystem.downloadAsync(
+      `${baseURL}/cliente/faturas/${id}/pdf`,
+      destino,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (resultado.status < 200 || resultado.status >= 300) {
+      throw new Error(`Falha ao baixar PDF (status ${resultado.status}).`);
+    }
+    return resultado.uri;
   },
 };

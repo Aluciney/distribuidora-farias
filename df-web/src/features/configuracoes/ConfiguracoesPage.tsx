@@ -20,6 +20,7 @@ import {
   BANCOS_SUPORTADOS,
   CONFIG_PADRAO,
   MENSAGEM_WHATSAPP_BOLETO_PADRAO,
+  MENSAGEM_WHATSAPP_CONFIRMACAO_PADRAO,
   configuracoesProntas,
   type ConfiguracoesCobranca,
 } from '@/features/configuracoes/store/configuracoes.store';
@@ -591,6 +592,36 @@ export function ConfiguracoesPage() {
               Esta mensagem é usada quando o boleto é enviado pelo WhatsApp do
               cliente — você pode marcar o envio direto no modal de nova
               cobrança.
+            </p>
+          </CardBody>
+        </Card>
+
+        {/* Confirmação de pagamento */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-emerald-300" />
+              <CardTitle>Mensagem de confirmação de pagamento</CardTitle>
+            </div>
+          </CardHeader>
+          <CardBody className="space-y-3">
+            <FormField
+              label="Texto disparado quando a fatura é marcada como paga"
+              htmlFor="whatsappMensagemConfirmacao"
+              erro={errors.whatsapp?.mensagemConfirmacao?.message}
+              ajuda="Placeholders disponíveis: {cliente}, {numero}, {valor}, {metodo}, {data}, {detalhe}"
+            >
+              <Textarea
+                id="whatsappMensagemConfirmacao"
+                rows={6}
+                placeholder={MENSAGEM_WHATSAPP_CONFIRMACAO_PADRAO}
+                {...register('whatsapp.mensagemConfirmacao')}
+              />
+            </FormField>
+            <p className="text-xs text-slate-500">
+              Enviada por WhatsApp, email e push notification para todas as
+              holdings vinculadas à filial quando o admin dá baixa manual ou o
+              cliente paga via cartão. Deixe em branco para usar o texto padrão.
             </p>
           </CardBody>
         </Card>

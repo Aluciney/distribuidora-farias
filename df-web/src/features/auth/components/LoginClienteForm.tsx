@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, LogIn, Mail, Wand2 } from 'lucide-react';
+import { AlertCircle, LogIn, Mail } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Button } from '@/components/ui/Button';
@@ -12,7 +12,6 @@ import {
   type LoginClienteFormValues,
 } from '@/features/auth/schemas/auth.schema';
 import { useLoginCliente } from '@/features/auth/hooks/useAuth';
-import { SENHA_DEMO } from '@/features/auth/services/auth.mock';
 
 export function LoginClienteForm() {
   const navigate = useNavigate();
@@ -22,11 +21,10 @@ export function LoginClienteForm() {
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginClienteFormValues>({
     resolver: zodResolver(loginClienteSchema),
-    defaultValues: { email: '', senha: '' },
+    defaultValues: { email: 'contato@atacadonorte.com.br', senha: 'df2026' },
   });
 
   const onSubmit = handleSubmit(async (valores) => {
@@ -38,13 +36,6 @@ export function LoginClienteForm() {
       setErro(err instanceof Error ? err.message : 'Erro ao entrar.');
     }
   });
-
-  const preencherDemo = () => {
-    // Holding "Grupo Central" (rede com 2 filiais) — credenciais de seed.
-    setValue('email', 'rede@grupocentral.com.br');
-    setValue('senha', SENHA_DEMO);
-    setErro(null);
-  };
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -95,15 +86,6 @@ export function LoginClienteForm() {
         <LogIn className="h-4 w-4" />
         Acessar minhas faturas
       </Button>
-
-      <button
-        type="button"
-        onClick={preencherDemo}
-        className="flex w-full items-center justify-center gap-1.5 rounded-md py-1.5 text-xs text-slate-500 hover:text-slate-300"
-      >
-        <Wand2 className="h-3 w-3" />
-        Preencher credenciais de demonstração
-      </button>
     </form>
   );
 }

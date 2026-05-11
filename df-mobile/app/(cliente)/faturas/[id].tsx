@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import * as Clipboard from 'expo-clipboard';
+import * as Sharing from 'expo-sharing';
 import {
+  AppState,
   Pressable,
   ScrollView,
   Text,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ArrowLeft,
   Banknote,
@@ -15,6 +17,7 @@ import {
   Check,
   Copy,
   CreditCard,
+  Download,
   QrCode,
 } from 'lucide-react-native';
 import QRCode from 'react-native-qrcode-svg';
@@ -22,6 +25,7 @@ import { Card, CardBody } from '@/components/Card';
 import { Badge, type Tom } from '@/components/Badge';
 import { Button } from '@/components/Button';
 import { CartaoForm } from '@/features/faturas/CartaoForm';
+import { faturasService } from '@/features/faturas/faturas.service';
 import { useFatura } from '@/features/faturas/useFaturas';
 import {
   MetodoPagamento,
@@ -64,8 +68,26 @@ export default function FaturaDetalheScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { data: fatura, isLoading } = useFatura(id);
+  const { data: fatura, isLoading, refetch } = useFatura(id);
   const [aba, setAba] = useState<Aba>('BOLETO');
+
+  // Re-busca sempre que o usuário volta pra essa tela (push/pop no stack do
+  // expo-router) — sem isso o screen fica vivo na pilha e o React Query
+  // devolve o cache antigo (admin pode ter dado baixa enquanto isso).
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch]),
+  );
+
+  // Idem quando o app volta do background — comum no fluxo "abro o app do
+  // banco pra pagar, volto pro nosso app pra ver se já caiu".
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refetch();
+    });
+    return () => sub.remove();
+  }, [refetch]);
 
   if (isLoading) {
     return (
@@ -253,6 +275,34 @@ export default function FaturaDetalheScreen() {
 }
 
 function BoletoView({ fatura }: { fatura: Fatura }) {
+  const [baixando, setBaixando] = useState(false);
+
+  async function baixarECompartilhar() {
+    try {
+      setBaixando(true);
+      const uri = await faturasService.baixarPdf(
+        fatura.id,
+        `boleto-${fatura.numero}.pdf`,
+      );
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          UTI: 'com.adobe.pdf',
+          dialogTitle: `Boleto ${fatura.numero}`,
+        });
+      } else {
+        toast.sucesso('Boleto baixado', `Salvo em ${uri}`);
+      }
+    } catch (err) {
+      toast.erro(
+        'Falha ao baixar',
+        err instanceof Error ? err.message : 'Erro inesperado.',
+      );
+    } finally {
+      setBaixando(false);
+    }
+  }
+
   return (
     <Card>
       <CardBody className="gap-3">
@@ -271,6 +321,14 @@ function BoletoView({ fatura }: { fatura: Fatura }) {
             rotulo="Copiar linha digitável"
           />
         </View>
+        <Button
+          variant="outline"
+          onPress={baixarECompartilhar}
+          loading={baixando}
+          iconeEsquerda={<Download size={14} color="#94a3b8" />}
+        >
+          Baixar boleto (PDF)
+        </Button>
         <Text className="text-xs text-slate-500">
           Cole a linha digitável no app do seu banco. A confirmação pode levar
           até 2 dias úteis.

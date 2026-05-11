@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto'
 import type { Cliente, Fatura, MetodoPagamento, PrismaClient, StatusFatura } from '@prisma/client'
+import { getFilaWhatsappBoleto } from '../../queues/filas'
 import { NaoEncontrado, Proibido, RegraNegocio } from '../../shared/erros'
 import { obterResponsaveisDoCliente } from '../../shared/tenancy'
 import { detectarBandeira, ultimosDigitos, validadeFutura, validarLuhn } from '../../shared/utils/cartao'
-import { whatsappService } from '../whatsapp/whatsapp.service'
 import { PushService } from '../push/push.service'
 import { type IBoletoGerador, BoletoMockGerador } from './boleto.gerador'
 import { gerarBoletoPdf } from './boleto.pdf'
@@ -300,6 +300,12 @@ export class CobrancasService {
 		return atualizada
 	}
 
+	/**
+	 * Valida pré-requisitos (responsável vinculado, telefone, configurações) e
+	 * enfileira o envio no Redis. O worker `whatsapp-boleto` consome a fila,
+	 * regenera o PDF e dispara via Baileys. Erros de envio são retriáveis com
+	 * backoff exponencial (5 tentativas).
+	 */
 	async enviarBoletoWhatsapp(id: string): Promise<{ enviadoEm: string; destinatario: string }> {
 		const fatura = await this.obter(id)
 		const cliente = fatura.cliente
@@ -334,24 +340,45 @@ export class CobrancasService {
 			throw new RegraNegocio('CONFIGURACAO_INCOMPLETA', 'Configurações de cobrança não encontradas.')
 		}
 
-		const pdf = await gerarBoletoPdf({ fatura, cliente, config })
-		const mensagem = montarMensagem(
-			config.whatsappMensagemBoleto ?? MENSAGEM_BOLETO_PADRAO,
-			fatura,
-			cliente,
-		)
-
-		await whatsappService.enviarDocumento(
-			telefoneDigitos,
-			{
-				buffer: pdf,
-				nomeArquivo: `boleto-${fatura.numero}.pdf`,
-				mimetype: 'application/pdf',
-			},
-			mensagem,
+		await getFilaWhatsappBoleto().add(
+			'enviar-boleto',
+			{ faturaId: fatura.id, destinatario: telefoneDigitos },
+			{ jobId: `boleto-${fatura.id}-${Date.now()}` },
 		)
 
 		return { enviadoEm: new Date().toISOString(), destinatario: telefoneDigitos }
+	}
+
+	/** Gera o PDF da fatura no padrão Febraban (barcode + PIX + linha
+	 *  digitável). Mesma função usada no envio via WhatsApp — assim web,
+	 *  app e WhatsApp recebem exatamente o mesmo documento. */
+	async gerarPdfBoleto(id: string): Promise<{ buffer: Buffer; nomeArquivo: string }> {
+		const fatura = await this.obter(id)
+		const config = await this.prisma.configuracoesCobranca.findUnique({
+			where: { id: 'unica' },
+		})
+		if (!config) {
+			throw new RegraNegocio('CONFIGURACAO_INCOMPLETA', 'Configurações de cobrança não encontradas.')
+		}
+		const buffer = await gerarBoletoPdf({ fatura, cliente: fatura.cliente, config })
+		return { buffer, nomeArquivo: `boleto-${fatura.numero}.pdf` }
+	}
+
+	/** Mesma coisa que `gerarPdfBoleto`, mas validando que a fatura pertence
+	 *  às filiais acessíveis pelo UsuarioCliente logado. */
+	async gerarPdfBoletoParaUsuarioCliente(
+		id: string,
+		clientesAcessiveis: string[],
+	): Promise<{ buffer: Buffer; nomeArquivo: string }> {
+		const fatura = await this.obterParaUsuarioCliente(id, clientesAcessiveis)
+		const config = await this.prisma.configuracoesCobranca.findUnique({
+			where: { id: 'unica' },
+		})
+		if (!config) {
+			throw new RegraNegocio('CONFIGURACAO_INCOMPLETA', 'Configurações de cobrança não encontradas.')
+		}
+		const buffer = await gerarBoletoPdf({ fatura, cliente: fatura.cliente, config })
+		return { buffer, nomeArquivo: `boleto-${fatura.numero}.pdf` }
 	}
 
 	private async gerarNumeroFatura(): Promise<string> {
@@ -376,7 +403,7 @@ function formatarDataBR(d: Date): string {
 	return `${dia}/${mes}/${d.getUTCFullYear()}`
 }
 
-function montarMensagem(template: string, fatura: Fatura, cliente: Cliente): string {
+export function montarMensagem(template: string, fatura: Fatura, cliente: Cliente): string {
 	const valor = `R$ ${(fatura.valor / 100).toFixed(2).replace('.', ',')}`
 	const venc = fatura.dataVencimento
 	const vencimento = `${String(venc.getUTCDate()).padStart(2, '0')}/${String(venc.getUTCMonth() + 1).padStart(2, '0')}/${venc.getUTCFullYear()}`

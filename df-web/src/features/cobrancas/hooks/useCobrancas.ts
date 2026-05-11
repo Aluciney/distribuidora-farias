@@ -81,6 +81,30 @@ export function usePagarComCartao() {
   });
 }
 
+export function useBaixarPdfBoleto() {
+  return useMutation({
+    mutationFn: async (id: UUID) => {
+      const { blob, nomeArquivo } = await cobrancasService.baixarPdf(id);
+      const url = URL.createObjectURL(blob);
+      try {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = nomeArquivo;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      } finally {
+        // Libera o object URL no próximo tick para garantir que o
+        // navegador já leu o blob antes do revoke.
+        setTimeout(() => URL.revokeObjectURL(url), 0);
+      }
+    },
+    onError: (err: Error) => {
+      toast.erro('Falha ao baixar PDF', err.message);
+    },
+  });
+}
+
 export function useEnviarBoletoWhatsapp() {
   return useMutation({
     mutationFn: (id: UUID) => cobrancasService.enviarBoletoWhatsapp(id),

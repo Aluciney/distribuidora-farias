@@ -118,6 +118,11 @@ const whatsappSchema = z.object({
     .max(2000, 'Máximo 2000 caracteres.')
     .optional()
     .or(z.literal('')),
+  mensagemConfirmacao: z
+    .string()
+    .max(2000, 'Máximo 2000 caracteres.')
+    .optional()
+    .or(z.literal('')),
 });
 
 export const configuracoesSchema = z.object({

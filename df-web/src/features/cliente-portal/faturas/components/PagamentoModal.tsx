@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
-import { useReactToPrint } from 'react-to-print';
+import { useEffect, useState } from 'react';
 import { Banknote, CreditCard, Download, QrCode } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -8,7 +7,7 @@ import { BoletoBarcode } from '@/components/ui/BoletoBarcode';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { PixQrCode } from '@/components/ui/PixQrCode';
 import { CartaoForm } from '@/features/cliente-portal/faturas/components/CartaoForm';
-import { FaturaImprimivel } from '@/features/cobrancas/components/FaturaImprimivel';
+import { useBaixarPdfBoleto } from '@/features/cobrancas/hooks/useCobrancas';
 import { MetodoPagamento, StatusFatura, type Fatura } from '@/types';
 import { formatCurrency, formatDate, formatDateTime } from '@/utils/format';
 import { cn } from '@/lib/cn';
@@ -50,11 +49,7 @@ export function PagamentoModal({
   fatura,
 }: PagamentoModalProps) {
   const [aba, setAba] = useState<Aba>('BOLETO');
-  const printRef = useRef<HTMLDivElement>(null);
-  const imprimir = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: fatura ? `Fatura-${fatura.numero}` : 'Fatura',
-  });
+  const baixarPdf = useBaixarPdfBoleto();
 
   useEffect(() => {
     if (aberto) setAba('BOLETO');
@@ -88,7 +83,11 @@ export function PagamentoModal({
           <Button variant="outline" onClick={onFechar}>
             Fechar
           </Button>
-          <Button variant="outline" onClick={() => imprimir()}>
+          <Button
+            variant="outline"
+            loading={baixarPdf.isPending}
+            onClick={() => baixarPdf.mutate(fatura.id)}
+          >
             <Download className="h-4 w-4" />
             Baixar PDF
           </Button>
@@ -236,11 +235,6 @@ export function PagamentoModal({
             )}
           </>
         )}
-      </div>
-
-      {/* Versão imprimível: off-screen no fluxo normal, ativada pelo react-to-print. */}
-      <div style={{ position: 'absolute', left: '-10000px', top: 0 }} aria-hidden>
-        <FaturaImprimivel ref={printRef} fatura={fatura} />
       </div>
     </Modal>
   );

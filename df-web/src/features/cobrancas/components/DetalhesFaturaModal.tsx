@@ -1,14 +1,17 @@
-import { useRef } from 'react';
-import { useReactToPrint } from 'react-to-print';
-import { Banknote, Download, QrCode } from 'lucide-react';
+import { Banknote, Download, MessageSquare, QrCode } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { BoletoBarcode } from '@/components/ui/BoletoBarcode';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { PixQrCode } from '@/components/ui/PixQrCode';
-import { FaturaImprimivel } from '@/features/cobrancas/components/FaturaImprimivel';
-import { MetodoPagamento, StatusFatura, type Fatura } from '@/types';
+import {
+  useBaixarPdfBoleto,
+  useEnviarBoletoWhatsapp,
+} from '@/features/cobrancas/hooks/useCobrancas';
+import { useUsuarioLogado } from '@/features/auth/hooks/useUsuarioLogado';
+import { useStatusWhatsapp } from '@/features/whatsapp/hooks/useWhatsapp';
+import { MetodoPagamento, PerfilUsuario, StatusFatura, type Fatura } from '@/types';
 import {
   formatCNPJ,
   formatCurrency,
@@ -54,11 +57,10 @@ export function DetalhesFaturaModal({
   onBaixarManual,
   onCancelarFatura,
 }: DetalhesFaturaModalProps) {
-  const printRef = useRef<HTMLDivElement>(null);
-  const imprimir = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: fatura ? `Fatura-${fatura.numero}` : 'Fatura',
-  });
+  const { data: usuarioLogado } = useUsuarioLogado();
+  const { data: whatsappInfo } = useStatusWhatsapp();
+  const enviarWhatsapp = useEnviarBoletoWhatsapp();
+  const baixarPdf = useBaixarPdfBoleto();
 
   if (!fatura) {
     return (
@@ -72,6 +74,9 @@ export function DetalhesFaturaModal({
     fatura.status === StatusFatura.PENDENTE ||
     fatura.status === StatusFatura.VENCIDO;
   const podeCancelar = podeBaixar; // mesma condição: pendentes ou vencidas
+  const isAdmin = usuarioLogado?.perfil === PerfilUsuario.ADMIN;
+  const whatsappConectado = whatsappInfo?.status === 'conectado';
+  const podeReenviarWhatsapp = isAdmin && podeBaixar;
 
   return (
     <Modal
@@ -80,14 +85,40 @@ export function DetalhesFaturaModal({
       titulo={`Fatura ${fatura.numero}`}
       descricao={`Boleto + PIX • ${fatura.cliente?.razaoSocial ?? ''}`}
       tamanho="lg"
+      acoesCabecalho={
+        <>
+          {podeReenviarWhatsapp && (
+            <Button
+              variant="outline"
+              size="sm"
+              loading={enviarWhatsapp.isPending}
+              disabled={!whatsappConectado || enviarWhatsapp.isPending}
+              title={
+                whatsappConectado
+                  ? undefined
+                  : 'WhatsApp desconectado. Conecte em Configurações → WhatsApp.'
+              }
+              onClick={() => enviarWhatsapp.mutate(fatura.id)}
+            >
+              <MessageSquare className="h-4 w-4" />
+              Reenviar pelo WhatsApp
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            loading={baixarPdf.isPending}
+            onClick={() => baixarPdf.mutate(fatura.id)}
+          >
+            <Download className="h-4 w-4" />
+            Baixar PDF
+          </Button>
+        </>
+      }
       rodape={
         <>
           <Button variant="outline" onClick={onFechar}>
             Fechar
-          </Button>
-          <Button variant="outline" onClick={() => imprimir()}>
-            <Download className="h-4 w-4" />
-            Baixar PDF
           </Button>
           {podeCancelar && (
             <Button variant="danger" onClick={onCancelarFatura}>
@@ -251,11 +282,6 @@ export function DetalhesFaturaModal({
             <p className="mt-1">{fatura.observacoes}</p>
           </div>
         )}
-      </div>
-
-      {/* Versão imprimível: off-screen no fluxo normal, ativada pelo react-to-print. */}
-      <div style={{ position: 'absolute', left: '-10000px', top: 0 }} aria-hidden>
-        <FaturaImprimivel ref={printRef} fatura={fatura} />
       </div>
     </Modal>
   );

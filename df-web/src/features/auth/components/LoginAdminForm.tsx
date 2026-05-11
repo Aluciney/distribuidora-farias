@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, Mail, ShieldCheck, Wand2 } from 'lucide-react';
+import { AlertCircle, Mail, ShieldCheck } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Button } from '@/components/ui/Button';
@@ -12,7 +12,6 @@ import {
   type LoginAdminFormValues,
 } from '@/features/auth/schemas/auth.schema';
 import { useLoginAdmin } from '@/features/auth/hooks/useAuth';
-import { SENHA_DEMO } from '@/features/auth/services/auth.mock';
 
 export function LoginAdminForm() {
   const navigate = useNavigate();
@@ -22,11 +21,10 @@ export function LoginAdminForm() {
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginAdminFormValues>({
     resolver: zodResolver(loginAdminSchema),
-    defaultValues: { email: '', senha: '' },
+    defaultValues: { email: 'aluciney@df.com', senha: 'df2026' },
   });
 
   const onSubmit = handleSubmit(async (valores) => {
@@ -38,12 +36,6 @@ export function LoginAdminForm() {
       setErro(err instanceof Error ? err.message : 'Erro ao entrar.');
     }
   });
-
-  const preencherDemo = () => {
-    setValue('email', 'aluciney@df.com');
-    setValue('senha', SENHA_DEMO);
-    setErro(null);
-  };
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -94,15 +86,6 @@ export function LoginAdminForm() {
         <ShieldCheck className="h-4 w-4" />
         Entrar como Admin
       </Button>
-
-      <button
-        type="button"
-        onClick={preencherDemo}
-        className="flex w-full items-center justify-center gap-1.5 rounded-md py-1.5 text-xs text-slate-500 hover:text-slate-300"
-      >
-        <Wand2 className="h-3 w-3" />
-        Preencher credenciais de demonstração
-      </button>
     </form>
   );
 }

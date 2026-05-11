@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   FileText,
   Bell,
-  Wallet,
   Menu,
   X,
   LogOut,
@@ -17,6 +16,7 @@ import { SeletorFilial } from '@/features/cliente-portal/shared/components/Selet
 import { NotificacoesDropdown } from '@/features/cliente-portal/notificacoes/components/NotificacoesDropdown';
 import { AlterarSenhaModal } from '@/features/auth/components/AlterarSenhaModal';
 import { useAuthStore } from '@/store/auth.store';
+import Logo from '@/assets/logo.png';
 
 interface NavItem {
   to: string;
@@ -61,8 +61,8 @@ export function ClienteLayout() {
         )}
       >
         <div className="flex h-16 items-center justify-between border-b border-slate-800 px-5">
-          <div className="flex items-center gap-2">
-            <Wallet className="h-6 w-6 text-sky-400" />
+          <div className="flex items-center gap-3">
+            <img src={Logo} alt="Distribuidora Farias" className="w-16 h-auto" />
             <span className="font-semibold text-slate-100">Portal Cliente</span>
           </div>
           <button

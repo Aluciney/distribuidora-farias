@@ -162,6 +162,27 @@ export async function rotasCobrancasAdmin(app: FastifyInstance) {
 			),
 	)
 
+	a.get(
+		'/:id/pdf',
+		{
+			schema: {
+				tags: ['Cobranças'],
+				summary: 'Baixa o PDF do boleto (mesmo enviado por WhatsApp)',
+				security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+				params: z.object({ id: z.string().uuid() }),
+				response: { 404: erroSchema },
+			},
+			preHandler: guard,
+		},
+		async (req, reply) => {
+			const { buffer, nomeArquivo } = await service.gerarPdfBoleto(req.params.id)
+			return reply
+				.type('application/pdf')
+				.header('Content-Disposition', `inline; filename="${nomeArquivo}"`)
+				.send(buffer)
+		},
+	)
+
 	a.post(
 		'/:id/enviar-whatsapp',
 		{
@@ -267,6 +288,31 @@ export async function rotasCobrancasCliente(app: FastifyInstance) {
 		async (req) => {
 			const acessiveis = await obterClientesAcessiveis(app.prisma, req.sessao.sub)
 			return serializarFatura(await service.obterParaUsuarioCliente(req.params.id, acessiveis))
+		},
+	)
+
+	a.get(
+		'/:id/pdf',
+		{
+			schema: {
+				tags: ['Cobranças (cliente)'],
+				summary: 'Baixa o PDF do boleto da fatura (filial acessível)',
+				security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+				params: z.object({ id: z.string().uuid() }),
+				response: { 403: erroSchema, 404: erroSchema },
+			},
+			preHandler: guard,
+		},
+		async (req, reply) => {
+			const acessiveis = await obterClientesAcessiveis(app.prisma, req.sessao.sub)
+			const { buffer, nomeArquivo } = await service.gerarPdfBoletoParaUsuarioCliente(
+				req.params.id,
+				acessiveis,
+			)
+			return reply
+				.type('application/pdf')
+				.header('Content-Disposition', `inline; filename="${nomeArquivo}"`)
+				.send(buffer)
 		},
 	)
 

@@ -4,6 +4,7 @@ import {
   Building2,
   Mail,
   MailWarning,
+  Pencil,
   Phone,
   Plus,
   Search,
@@ -24,6 +25,7 @@ import {
   useUsuariosCliente,
 } from '@/features/usuarios-cliente/hooks/useUsuariosCliente';
 import { NovoUsuarioClienteModal } from '@/features/usuarios-cliente/components/NovoUsuarioClienteModal';
+import { EditarUsuarioClienteModal } from '@/features/usuarios-cliente/components/EditarUsuarioClienteModal';
 import { GerenciarFiliaisModal } from '@/features/usuarios-cliente/components/GerenciarFiliaisModal';
 import { maskTelefone } from '@/utils/cnpj';
 import type { UsuarioCliente } from '@/types';
@@ -37,6 +39,9 @@ export function UsuariosClientePage() {
   const [porPagina, setPorPagina] = useState(20);
   const [criarAberto, setCriarAberto] = useState(false);
   const [usuarioFiliais, setUsuarioFiliais] = useState<UsuarioCliente | null>(
+    null,
+  );
+  const [usuarioEditar, setUsuarioEditar] = useState<UsuarioCliente | null>(
     null,
   );
 
@@ -198,6 +203,14 @@ export function UsuariosClientePage() {
                       <Button
                         size="sm"
                         variant="outline"
+                        onClick={() => setUsuarioEditar(u)}
+                      >
+                        <Pencil className="h-3 w-3" />
+                        Editar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
                         onClick={() => setUsuarioFiliais(u)}
                       >
                         <Building2 className="h-3 w-3" />
@@ -244,6 +257,11 @@ export function UsuariosClientePage() {
       <NovoUsuarioClienteModal
         aberto={criarAberto}
         onFechar={() => setCriarAberto(false)}
+      />
+      <EditarUsuarioClienteModal
+        aberto={Boolean(usuarioEditar)}
+        onFechar={() => setUsuarioEditar(null)}
+        usuario={usuarioEditar}
       />
       <GerenciarFiliaisModal
         aberto={Boolean(usuarioFiliais)}

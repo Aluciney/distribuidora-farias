@@ -5,7 +5,6 @@ import {
   Users,
   Receipt,
   AlertTriangle,
-  Wallet,
   Workflow,
   ShieldCheck,
   Boxes,
@@ -22,6 +21,7 @@ import { useUsuarioLogado } from '@/features/auth/hooks/useUsuarioLogado';
 import { useAuthStore } from '@/store/auth.store';
 import { AlterarSenhaModal } from '@/features/auth/components/AlterarSenhaModal';
 import { PerfilUsuario } from '@/types';
+import Logo from '@/assets/logo.png';
 
 interface NavItem {
   to: string;
@@ -83,9 +83,9 @@ export function AdminLayout() {
         )}
       >
         <div className="flex h-16 items-center justify-between border-b border-slate-800 px-5">
-          <div className="flex items-center gap-2">
-            <Wallet className="h-6 w-6 text-emerald-400" />
-            <span className="font-semibold text-slate-100">DF Pagamentos</span>
+          <div className="flex items-center gap-3">
+            <img src={Logo} alt="Distribuidora Farias" className="w-16 h-auto" />
+            <span className="font-semibold text-slate-100">Portal Admin</span>
           </div>
           <button
             type="button"

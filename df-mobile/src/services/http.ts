@@ -44,6 +44,12 @@ export function setarToken(token: string | null) {
   tokenAtual = token;
 }
 
+/** Lê o token atual do interceptor — útil para downloads diretos via
+ *  `FileSystem.downloadAsync` que não passam pelo axios. */
+export function obterToken(): string | null {
+  return tokenAtual;
+}
+
 export const httpClient: AxiosInstance = axios.create({
   baseURL,
   headers: { Accept: 'application/json', 'Content-Type': 'application/json' },

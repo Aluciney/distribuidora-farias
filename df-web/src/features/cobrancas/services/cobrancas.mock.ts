@@ -1,7 +1,7 @@
 /**
  * @deprecated Mantém o nome original; agora chama o backend df-api via axios.
  */
-import { api } from '@/services/api/http';
+import { api, httpClient } from '@/services/api/http';
 import { fromFaturaDTO, type FaturaDTO } from '@/services/api/transformers';
 import { useAuthStore } from '@/store/auth.store';
 import {
@@ -140,6 +140,17 @@ export const cobrancasService = {
     return api.post<{ ok: true; enviadoEm: string; destinatario: string }>(
       `/admin/cobrancas/${id}/enviar-whatsapp`,
     );
+  },
+
+  /** Baixa o PDF do boleto gerado pelo backend (mesmo padrão usado pelo
+   *  envio via WhatsApp). Retorna o Blob e o nome de arquivo sugerido. */
+  async baixarPdf(id: UUID): Promise<{ blob: Blob; nomeArquivo: string }> {
+    const path = ehCliente() ? `/cliente/faturas/${id}/pdf` : `/admin/cobrancas/${id}/pdf`;
+    const res = await httpClient.get<Blob>(path, { responseType: 'blob' });
+    const fallback = `boleto-${id}.pdf`;
+    const dispo = res.headers['content-disposition'] as string | undefined;
+    const match = dispo?.match(/filename="?([^";]+)"?/i);
+    return { blob: res.data, nomeArquivo: match?.[1] ?? fallback };
   },
 
   async pagarComCartao(id: UUID, payload: PagamentoCartaoPayload): Promise<Fatura> {

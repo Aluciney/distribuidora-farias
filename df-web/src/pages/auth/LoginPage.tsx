@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { Building2, ShieldCheck, Wallet } from 'lucide-react';
+import { Building2, ShieldCheck } from 'lucide-react';
 import { LoginAdminForm } from '@/features/auth/components/LoginAdminForm';
 import { LoginClienteForm } from '@/features/auth/components/LoginClienteForm';
 import { EsqueciSenhaModal } from '@/features/auth/components/EsqueciSenhaModal';
-import { SENHA_DEMO } from '@/features/auth/services/auth.mock';
 import { useAuthStore } from '@/store/auth.store';
 import { cn } from '@/lib/cn';
+import Logo from '@/assets/logo.png'
 
 type Aba = 'ADMIN' | 'CLIENTE';
 
@@ -16,15 +16,11 @@ export function LoginPage() {
 
   // Se a rota foi `/login?tipo=cliente`, abre direto a aba do cliente.
   const inicial: Aba =
-    new URLSearchParams(location.search).get('tipo') === 'cliente'
-      ? 'CLIENTE'
-      : 'ADMIN';
+    new URLSearchParams(location.search).get('tipo') === 'admin'
+      ? 'ADMIN'
+      : 'CLIENTE';
   const [aba, setAba] = useState<Aba>(inicial);
   const [esqueciAberto, setEsqueciAberto] = useState(false);
-
-  useEffect(() => {
-    setAba(inicial);
-  }, [inicial]);
 
   // Já logado? Redireciona para a área correspondente.
   if (tipoSessao === 'ADMIN') return <Navigate to="/admin" replace />;
@@ -36,13 +32,7 @@ export function LoginPage() {
         {/* Branding lateral (visível em telas grandes) */}
         <aside className="hidden flex-col gap-6 lg:flex">
           <div className="flex items-center gap-3">
-            <Wallet className="h-10 w-10 text-emerald-400" />
-            <div>
-              <h1 className="text-2xl font-semibold text-slate-100">
-                DF Pagamentos
-              </h1>
-              <p className="text-sm text-slate-400">Distribuidora Farias</p>
-            </div>
+            <img src={Logo} alt="Distribuidora Farias" />
           </div>
           <p className="text-base leading-relaxed text-slate-300">
             Centralize a gestão financeira da distribuidora com Boletos, PIX e
@@ -59,23 +49,11 @@ export function LoginPage() {
         {/* Card de login */}
         <main className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-xl backdrop-blur sm:p-8">
           <div className="mb-6 flex flex-col items-center gap-2 text-center lg:hidden">
-            <Wallet className="h-10 w-10 text-emerald-400" />
-            <h1 className="text-xl font-semibold text-slate-100">
-              DF Pagamentos
-            </h1>
-            <p className="text-xs text-slate-400">Distribuidora Farias</p>
+            <img src={Logo} alt="Distribuidora Farias" width={200} height="auto" />
           </div>
 
           {/* Tabs */}
           <div className="mb-6 grid grid-cols-2 gap-1 rounded-lg border border-slate-800 bg-slate-900 p-1">
-            <TabButton
-              ativo={aba === 'ADMIN'}
-              onClick={() => setAba('ADMIN')}
-              icone={<ShieldCheck className="h-3.5 w-3.5" />}
-              tom="emerald"
-            >
-              Sou da equipe
-            </TabButton>
             <TabButton
               ativo={aba === 'CLIENTE'}
               onClick={() => setAba('CLIENTE')}
@@ -83,6 +61,14 @@ export function LoginPage() {
               tom="sky"
             >
               Sou cliente
+            </TabButton>
+            <TabButton
+              ativo={aba === 'ADMIN'}
+              onClick={() => setAba('ADMIN')}
+              icone={<ShieldCheck className="h-3.5 w-3.5" />}
+              tom="emerald"
+            >
+              Sou da equipe
             </TabButton>
           </div>
 
@@ -108,16 +94,6 @@ export function LoginPage() {
               Esqueceu sua senha?
             </button>
             <span className="text-slate-600">v1.0 mock</span>
-          </div>
-
-          <div className="mt-6 rounded-lg border border-slate-800 bg-slate-950/40 p-3 text-xs text-slate-400">
-            <p className="font-semibold text-slate-300">
-              Modo demonstração
-            </p>
-            <p className="mt-1">
-              Use <code className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-emerald-300">{SENHA_DEMO}</code>{' '}
-              como senha para qualquer usuário/cliente cadastrado nos mocks.
-            </p>
           </div>
         </main>
       </div>

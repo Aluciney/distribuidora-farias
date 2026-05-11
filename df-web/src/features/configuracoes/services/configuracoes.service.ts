@@ -8,6 +8,7 @@ import { toast } from '@/store/toast.store';
 import {
   CONFIG_PADRAO,
   MENSAGEM_WHATSAPP_BOLETO_PADRAO,
+  MENSAGEM_WHATSAPP_CONFIRMACAO_PADRAO,
   type ConfiguracoesCobranca,
   type TipoChavePix,
 } from '@/features/configuracoes/store/configuracoes.store';
@@ -49,6 +50,7 @@ interface ConfigBackendDTO {
   };
   whatsapp?: {
     mensagemBoleto: string | null;
+    mensagemConfirmacao: string | null;
   };
   atualizadoEm: string;
 }
@@ -91,6 +93,8 @@ function fromBackend(dto: ConfigBackendDTO): ConfiguracoesCobranca {
     whatsapp: {
       mensagemBoleto:
         dto.whatsapp?.mensagemBoleto ?? MENSAGEM_WHATSAPP_BOLETO_PADRAO,
+      mensagemConfirmacao:
+        dto.whatsapp?.mensagemConfirmacao ?? MENSAGEM_WHATSAPP_CONFIRMACAO_PADRAO,
     },
   };
 }
@@ -130,6 +134,7 @@ function toBackend(c: ConfiguracoesCobranca) {
     },
     whatsapp: {
       mensagemBoleto: c.whatsapp?.mensagemBoleto || null,
+      mensagemConfirmacao: c.whatsapp?.mensagemConfirmacao || null,
     },
   };
 }

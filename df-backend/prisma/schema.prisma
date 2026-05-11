@@ -413,6 +413,11 @@ model ConfiguracoesCobranca {
   /// {cliente}, {numero}, {valor}, {vencimento}, {linhaDigitavel}, {pix}.
   whatsappMensagemBoleto String? @map("whatsapp_mensagem_boleto")
 
+  /// Texto disparado em todos os canais (WhatsApp/email/push) quando uma
+  /// fatura é marcada como paga. Suporta placeholders:
+  /// {cliente}, {numero}, {valor}, {metodo}, {data}, {detalhe}.
+  whatsappMensagemConfirmacao String? @map("whatsapp_mensagem_confirmacao")
+
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
 
   @@map("configuracoes_cobranca")
