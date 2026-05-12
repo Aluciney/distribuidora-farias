@@ -10,8 +10,8 @@ interface RequireAuthProps {
 
 /**
  * Bloqueia o acesso à árvore de rotas filha quando a sessão atual não bate
- * com o `tipo` esperado. Redireciona para `/login` preservando a intenção
- * via query string (`?tipo=cliente|admin`).
+ * com o `tipo` esperado. Redireciona para `/login` (cliente) ou `/admin/login`
+ * (admin) preservando a rota original em `state.from`.
  */
 export function RequireAuth({ tipo, children }: RequireAuthProps) {
   const tipoAtual = useAuthStore((s) => s.tipo);
@@ -25,10 +25,10 @@ export function RequireAuth({ tipo, children }: RequireAuthProps) {
       (tipo === 'USUARIO_CLIENTE' && Boolean(usuarioClienteId)));
 
   if (!autenticado) {
-    const param = tipo === 'USUARIO_CLIENTE' ? 'cliente' : 'admin';
+    const destino = tipo === 'ADMIN' ? '/admin/login' : '/login';
     return (
       <Navigate
-        to={`/login?tipo=${param}`}
+        to={destino}
         replace
         state={{ from: location.pathname }}
       />

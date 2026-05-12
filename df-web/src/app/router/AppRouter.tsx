@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { ClienteLayout } from '@/components/layout/ClienteLayout';
 import { LoginPage } from '@/pages/auth/LoginPage';
+import { LoginAdminPage } from '@/pages/auth/LoginAdminPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { RequireAuth } from '@/app/router/RequireAuth';
 import { RequirePerfil } from '@/app/router/RequirePerfil';
@@ -27,6 +28,7 @@ export function AppRouter() {
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/admin/login" element={<LoginAdminPage />} />
 
         {/* Portal Administrativo */}
         <Route

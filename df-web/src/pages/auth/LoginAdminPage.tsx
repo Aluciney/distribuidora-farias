@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { FileText, CreditCard, Bell } from 'lucide-react';
-import { LoginClienteForm } from '@/features/auth/components/LoginClienteForm';
+import { BarChart3, Users, Lock } from 'lucide-react';
+import { LoginAdminForm } from '@/features/auth/components/LoginAdminForm';
 import { EsqueciSenhaModal } from '@/features/auth/components/EsqueciSenhaModal';
 import { useAuthStore } from '@/store/auth.store';
 import Logo from '@/assets/logo.png';
 
-export function LoginPage() {
+export function LoginAdminPage() {
   const tipoSessao = useAuthStore((s) => s.tipo);
   const [esqueciAberto, setEsqueciAberto] = useState(false);
 
@@ -22,25 +22,25 @@ export function LoginPage() {
           </div>
           <div>
             <h1 className="text-2xl font-semibold text-slate-100">
-              Portal do Cliente
+              Painel Administrativo
             </h1>
             <p className="mt-2 text-base leading-relaxed text-slate-300">
-              Acompanhe as faturas das suas filiais, baixe boletos e quite seus
-              títulos com a Distribuidora Farias de forma rápida e segura.
+              Área restrita à equipe da Distribuidora Farias. Gerencie clientes,
+              cobranças e a operação financeira em um único lugar.
             </p>
           </div>
           <ul className="space-y-3 text-sm text-slate-400">
             <Feature
-              icone={<FileText className="h-4 w-4 text-emerald-400" />}
-              texto="Consulta de faturas em aberto, pagas e vencidas"
+              icone={<BarChart3 className="h-4 w-4 text-emerald-400" />}
+              texto="Fluxo de caixa e inadimplência em tempo real"
             />
             <Feature
-              icone={<CreditCard className="h-4 w-4 text-emerald-400" />}
-              texto="Pagamento via Boleto, PIX ou cartão de crédito"
+              icone={<Users className="h-4 w-4 text-emerald-400" />}
+              texto="Gestão de clientes, cobranças e régua automatizada"
             />
             <Feature
-              icone={<Bell className="h-4 w-4 text-emerald-400" />}
-              texto="Notificações de vencimento direto no seu painel"
+              icone={<Lock className="h-4 w-4 text-emerald-400" />}
+              texto="Acesso restrito por perfil — uso interno autorizado"
             />
           </ul>
         </aside>
@@ -52,14 +52,14 @@ export function LoginPage() {
 
           <header className="mb-5">
             <h2 className="text-lg font-semibold text-slate-100">
-              Acesse sua conta
+              Acesso interno
             </h2>
             <p className="mt-1 text-xs text-slate-400">
-              Use o email cadastrado para acessar as faturas das suas filiais.
+              Use o email corporativo cadastrado no sistema.
             </p>
           </header>
 
-          <LoginClienteForm />
+          <LoginAdminForm />
 
           <div className="mt-5 flex items-center justify-between text-xs">
             <button
@@ -77,7 +77,7 @@ export function LoginPage() {
       <EsqueciSenhaModal
         aberto={esqueciAberto}
         onFechar={() => setEsqueciAberto(false)}
-        tipoInicial="USUARIO_CLIENTE"
+        tipoInicial="ADMIN"
       />
     </div>
   );

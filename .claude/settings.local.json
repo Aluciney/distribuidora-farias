@@ -38,7 +38,8 @@
       "Bash(Get-ChildItem -Path \"C:\\\\www\\\\distribuidora-farias\" -Directory)",
       "Bash(cd /c/www/distribuidora-farias/df-web && cat package.json | head -40)",
       "Read(//c/c/www/distribuidora-farias/df-web/**)",
-      "Bash(npx --prefix . tsc -b --noEmit)"
+      "Bash(npx --prefix . tsc -b --noEmit)",
+      "Bash(dir d:\\\\df-distribuidora\\\\claude)"
     ]
   }
 }

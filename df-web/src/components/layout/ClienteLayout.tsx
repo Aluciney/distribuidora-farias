@@ -39,8 +39,11 @@ export function ClienteLayout() {
   const logout = useAuthStore((s) => s.logout);
 
   const onLogout = () => {
-    logout();
-    navigate('/login?tipo=cliente');
+    const isConfirm = window.confirm('Tem certeza que deseja sair?')
+    if (isConfirm) {
+      logout();
+      navigate('/login');
+    }
   };
 
   return (

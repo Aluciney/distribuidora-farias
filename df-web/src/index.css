@@ -18,3 +18,9 @@
     -webkit-font-smoothing: antialiased;
   }
 }
+
+.bg-pattern {
+            background-image: radial-gradient(#424754 0.5px, transparent 0.5px);
+            background-size: 24px 24px;
+            opacity: 0.15;
+        }

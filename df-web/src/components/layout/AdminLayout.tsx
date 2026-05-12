@@ -62,8 +62,11 @@ export function AdminLayout() {
   const logout = useAuthStore((s) => s.logout);
 
   const onLogout = () => {
-    logout();
-    navigate('/login?tipo=admin');
+    const isConfirm = window.confirm('Tem certeza que deseja sair?')
+    if(isConfirm){
+      logout();
+      navigate('/admin/login');
+    }
   };
 
   const navItensVisiveis = NAV_ITEMS.filter(
@@ -90,7 +93,7 @@ export function AdminLayout() {
         <div className="flex h-16 items-center justify-between border-b border-slate-800 px-5">
           <div className="flex items-center gap-3">
             <img src={Logo} alt="Distribuidora Farias" className="w-16 h-auto" />
-            <span className="font-semibold text-slate-100">Portal Admin</span>
+            <span className="font-semibold text-slate-100">Portal ADM</span>
           </div>
           <button
             type="button"
