@@ -34,7 +34,7 @@ export function Modal({
     <RNModal
       visible={aberto}
       transparent
-      animationType="slide"
+      animationType="fade"
       onRequestClose={onFechar}
       statusBarTranslucent
     >

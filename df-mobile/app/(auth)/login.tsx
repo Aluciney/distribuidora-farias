@@ -71,19 +71,7 @@ export default function LoginScreen() {
         <View className="flex-1 justify-center gap-6">
           <View className="items-center gap-3">
             <Image source={Logo} className="w-44 h-28" />
-            {/* <View className="h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10">
-              <Wallet size={32} color="#34d399" />
-            </View>
-            <View className="items-center">
-              <Text className="text-2xl font-semibold text-slate-100">
-                DF Pagamentos
-              </Text>
-              <Text className="mt-1 text-xs text-slate-500">
-                Distribuidora Farias
-              </Text>
-            </View> */}
           </View>
-
           <Card>
             <CardBody className="gap-4">
               <View className="gap-1">
@@ -132,7 +120,7 @@ export default function LoginScreen() {
 
               <Pressable
                 onPress={() => setEsqueciAberto(true)}
-                className="self-center py-1"
+                className="self-center py-1 px-2"
               >
                 <Text className="text-xs text-slate-400 active:text-slate-200">
                   Esqueceu sua senha?
