@@ -31,7 +31,14 @@ declare module '@fastify/jwt' {
 }
 
 export const authPlugin = fp(async (app) => {
-	await app.register(fastifyCookie, { secret: env.COOKIE_SECRET })
+	await app.register(fastifyCookie, {
+		secret: env.COOKIE_SECRET,
+		parseOptions: {
+			httpOnly: true,
+			secure: true,
+			sameSite: 'none'
+		}
+	})
 
 	await app.register(fastifyJwt, {
 		secret: env.JWT_SECRET,
