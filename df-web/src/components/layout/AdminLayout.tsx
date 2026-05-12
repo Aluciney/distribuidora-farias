@@ -63,7 +63,7 @@ export function AdminLayout() {
 
   const onLogout = () => {
     const isConfirm = window.confirm('Tem certeza que deseja sair?')
-    if(isConfirm){
+    if (isConfirm) {
       logout();
       navigate('/admin/login');
     }
@@ -75,6 +75,8 @@ export function AdminLayout() {
 
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-200">
+      <div className="absolute top-0 right-0 w-125 h-125 bg-[#571bc1] opacity-10 blur-[120px] rounded-full hidden sm:block"></div>
+      <div className="absolute bottom-0 left-0 w-125 h-125 bg-[#4d8eff] opacity-10 blur-[120px] rounded-full hidden sm:block"></div>
       {sidebarOpen && (
         <div
           aria-hidden

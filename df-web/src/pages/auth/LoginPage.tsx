@@ -15,6 +15,8 @@ export function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-8 text-slate-200">
+      <div className="absolute top-0 right-0 w-125 h-125 bg-[#571bc1] opacity-10 blur-[120px] rounded-full hidden sm:block"></div>
+      <div className="absolute bottom-0 left-0 w-125 h-125 bg-[#4d8eff] opacity-10 blur-[120px] rounded-full hidden sm:block"></div>
       <div className="grid w-full max-w-4xl items-center gap-8 lg:grid-cols-2">
         <aside className="hidden flex-col gap-6 lg:flex">
           <div className="flex items-center gap-3">
