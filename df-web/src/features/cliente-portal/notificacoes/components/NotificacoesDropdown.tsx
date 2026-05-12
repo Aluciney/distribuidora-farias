@@ -12,11 +12,11 @@ export function NotificacoesDropdown() {
   const [aberto, setAberto] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const { data: notificacoes } = useNotificacoes();
+  const { data } = useNotificacoes({ porPagina: 10 });
+  const notificacoes = data?.itens;
+  const naoLidas = data?.totalNaoLidas ?? 0;
   const marcarLida = useMarcarNotificacaoLida();
   const marcarTodas = useMarcarTodasComoLidas();
-
-  const naoLidas = notificacoes?.filter((n) => n.naoLida).length ?? 0;
 
   useEffect(() => {
     if (!aberto) return;

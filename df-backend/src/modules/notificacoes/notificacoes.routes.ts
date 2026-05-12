@@ -122,17 +122,42 @@ export async function rotasNotificacoesCliente(app: FastifyInstance) {
 				tags: ['Notificações (cliente)'],
 				summary: 'Lista notificações do UsuarioCliente logado (todas as filiais)',
 				security: [{ cookieAuth: [] }, { bearerAuth: [] }],
-				response: { 200: z.object({ itens: z.array(notificacaoSchema) }) },
+				querystring: z.object({
+					pagina: z.coerce.number().int().positive().default(1),
+					porPagina: z.coerce.number().int().positive().max(100).default(10),
+				}),
+				response: {
+					200: z.object({
+						itens: z.array(notificacaoSchema),
+						total: z.number(),
+						totalNaoLidas: z.number(),
+						pagina: z.number(),
+						porPagina: z.number(),
+					}),
+				},
 			},
 			preHandler: guard,
 		},
 		async (req) => {
-			const itens = await app.prisma.notificacao.findMany({
-				where: { usuarioClienteId: req.sessao.sub },
-				include: { cliente: true },
-				orderBy: { criadoEm: 'desc' },
-			})
-			return { itens: itens.map(serializar) }
+			const where = { usuarioClienteId: req.sessao.sub }
+			const [itens, total, totalNaoLidas] = await Promise.all([
+				app.prisma.notificacao.findMany({
+					where,
+					include: { cliente: true },
+					orderBy: { criadoEm: 'desc' },
+					skip: (req.query.pagina - 1) * req.query.porPagina,
+					take: req.query.porPagina,
+				}),
+				app.prisma.notificacao.count({ where }),
+				app.prisma.notificacao.count({ where: { ...where, lidaEm: null } }),
+			])
+			return {
+				itens: itens.map(serializar),
+				total,
+				totalNaoLidas,
+				pagina: req.query.pagina,
+				porPagina: req.query.porPagina,
+			}
 		},
 	)
 

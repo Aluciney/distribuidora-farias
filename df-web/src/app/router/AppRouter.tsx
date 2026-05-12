@@ -4,6 +4,8 @@ import { ClienteLayout } from '@/components/layout/ClienteLayout';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { RequireAuth } from '@/app/router/RequireAuth';
+import { RequirePerfil } from '@/app/router/RequirePerfil';
+import { PerfilUsuario } from '@/types';
 import { FluxoCaixaPage } from '@/features/fluxo-caixa/FluxoCaixaPage';
 import { ClientesPage } from '@/features/clientes/ClientesPage';
 import { CobrancasPage } from '@/features/cobrancas/CobrancasPage';
@@ -40,8 +42,22 @@ export function AppRouter() {
           <Route path="cobrancas" element={<CobrancasPage />} />
           <Route path="inadimplencia" element={<InadimplenciaPage />} />
           <Route path="regua-cobranca" element={<ReguaPage />} />
-          <Route path="whatsapp" element={<WhatsappPage />} />
-          <Route path="usuarios" element={<UsuariosPage />} />
+          <Route
+            path="whatsapp"
+            element={
+              <RequirePerfil perfis={[PerfilUsuario.ADMIN]}>
+                <WhatsappPage />
+              </RequirePerfil>
+            }
+          />
+          <Route
+            path="usuarios"
+            element={
+              <RequirePerfil perfis={[PerfilUsuario.ADMIN]}>
+                <UsuariosPage />
+              </RequirePerfil>
+            }
+          />
           <Route path="usuarios-cliente" element={<UsuariosClientePage />} />
           <Route path="produtos" element={<ProdutosPage />} />
           <Route path="configuracoes" element={<ConfiguracoesPage />} />

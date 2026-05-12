@@ -22,7 +22,7 @@ const enviarMensagemSchema = z.object({
 
 export async function rotasWhatsapp(app: FastifyInstance) {
 	const a = app.withTypeProvider<ZodTypeProvider>()
-	const guard = [app.requerAdmin]
+	const guard = [app.requerPerfilAdmin]
 
 	a.get(
 		'/status',

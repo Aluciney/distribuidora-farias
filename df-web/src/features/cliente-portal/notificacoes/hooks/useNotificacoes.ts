@@ -1,17 +1,29 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { notificacoesService } from '@/features/cliente-portal/notificacoes/services/notificacoes.mock';
+import {
+  notificacoesService,
+  type FiltrosNotificacoes,
+  type ListagemNotificacoes,
+} from '@/features/cliente-portal/notificacoes/services/notificacoes.mock';
 import { useAuthStore } from '@/store/auth.store';
 
 const KEY_BASE = ['notificacoes'] as const;
 
-export function useNotificacoes() {
+const VAZIO: ListagemNotificacoes = {
+  itens: [],
+  total: 0,
+  totalNaoLidas: 0,
+  pagina: 1,
+  porPagina: 10,
+};
+
+export function useNotificacoes(filtros: FiltrosNotificacoes = {}) {
   const usuarioClienteId = useAuthStore((s) => s.usuarioClienteId);
-  return useQuery({
-    queryKey: [...KEY_BASE, usuarioClienteId],
+  return useQuery<ListagemNotificacoes>({
+    queryKey: [...KEY_BASE, usuarioClienteId, filtros.pagina, filtros.porPagina],
     queryFn: () =>
       usuarioClienteId
-        ? notificacoesService.listar()
-        : Promise.resolve([]),
+        ? notificacoesService.listar(filtros)
+        : Promise.resolve(VAZIO),
     enabled: Boolean(usuarioClienteId),
     refetchInterval: 30_000,
   });

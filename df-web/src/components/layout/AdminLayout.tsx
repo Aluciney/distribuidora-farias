@@ -27,6 +27,7 @@ interface NavItem {
   to: string;
   label: string;
   icon: typeof LayoutDashboard;
+  apenasAdmin?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -36,8 +37,8 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/admin/cobrancas', label: 'Cobranças', icon: Receipt },
   { to: '/admin/inadimplencia', label: 'Inadimplência', icon: AlertTriangle },
   { to: '/admin/regua-cobranca', label: 'Régua de Cobrança', icon: Workflow },
-  { to: '/admin/whatsapp', label: 'WhatsApp', icon: MessageCircle },
-  { to: '/admin/usuarios', label: 'Equipe interna', icon: ShieldCheck },
+  { to: '/admin/whatsapp', label: 'WhatsApp', icon: MessageCircle, apenasAdmin: true },
+  { to: '/admin/usuarios', label: 'Equipe interna', icon: ShieldCheck, apenasAdmin: true },
   { to: '/admin/produtos', label: 'Produtos', icon: Boxes },
   { to: '/admin/configuracoes', label: 'Configurações', icon: Settings2 },
 ];
@@ -64,6 +65,10 @@ export function AdminLayout() {
     logout();
     navigate('/login?tipo=admin');
   };
+
+  const navItensVisiveis = NAV_ITEMS.filter(
+    (item) => !item.apenasAdmin || usuario?.perfil === PerfilUsuario.ADMIN,
+  );
 
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-200">
@@ -98,7 +103,7 @@ export function AdminLayout() {
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-          {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+          {navItensVisiveis.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}

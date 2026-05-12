@@ -23,6 +23,23 @@ interface NotificacaoDTO {
 
 interface ListagemDTO {
   itens: NotificacaoDTO[];
+  total: number;
+  totalNaoLidas: number;
+  pagina: number;
+  porPagina: number;
+}
+
+export interface ListagemNotificacoes {
+  itens: Notificacao[];
+  total: number;
+  totalNaoLidas: number;
+  pagina: number;
+  porPagina: number;
+}
+
+export interface FiltrosNotificacoes {
+  pagina?: number;
+  porPagina?: number;
 }
 
 function fromDto(dto: NotificacaoDTO): Notificacao {
@@ -44,9 +61,18 @@ function fromDto(dto: NotificacaoDTO): Notificacao {
 }
 
 export const notificacoesService = {
-  async listar(): Promise<Notificacao[]> {
-    const { itens } = await api.get<ListagemDTO>('/cliente/notificacoes');
-    return itens.map(fromDto);
+  async listar(filtros: FiltrosNotificacoes = {}): Promise<ListagemNotificacoes> {
+    const dto = await api.get<ListagemDTO>('/cliente/notificacoes', {
+      pagina: filtros.pagina,
+      porPagina: filtros.porPagina,
+    });
+    return {
+      itens: dto.itens.map(fromDto),
+      total: dto.total,
+      totalNaoLidas: dto.totalNaoLidas,
+      pagina: dto.pagina,
+      porPagina: dto.porPagina,
+    };
   },
   async marcarComoLida(id: string): Promise<void> {
     await api.post(`/cliente/notificacoes/${id}/marcar-lida`);

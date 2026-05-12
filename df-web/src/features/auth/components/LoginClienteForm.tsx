@@ -24,7 +24,7 @@ export function LoginClienteForm() {
     formState: { errors, isSubmitting },
   } = useForm<LoginClienteFormValues>({
     resolver: zodResolver(loginClienteSchema),
-    defaultValues: { email: 'contato@atacadonorte.com.br', senha: 'df2026' },
+    defaultValues: { email: 'aluciney.wanderley@gmail.com', senha: 'df2026' },
   });
 
   const onSubmit = handleSubmit(async (valores) => {

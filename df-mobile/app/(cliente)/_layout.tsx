@@ -31,8 +31,8 @@ export default function ClienteLayout() {
 }
 
 function ClienteTabs() {
-  const { data: notificacoes } = useNotificacoes();
-  const naoLidas = notificacoes?.filter((n) => n.naoLida).length ?? 0;
+  const { data } = useNotificacoes({ porPagina: 10 });
+  const naoLidas = data?.totalNaoLidas ?? 0;
 
   return (
     <Tabs

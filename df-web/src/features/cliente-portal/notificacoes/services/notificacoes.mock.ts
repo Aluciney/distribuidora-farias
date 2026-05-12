@@ -9,13 +9,39 @@ import type { Notificacao } from '@/types';
 
 interface ListagemDTO {
   itens: NotificacaoDTO[];
+  total: number;
+  totalNaoLidas: number;
+  pagina: number;
+  porPagina: number;
+}
+
+export interface ListagemNotificacoes {
+  itens: Notificacao[];
+  total: number;
+  totalNaoLidas: number;
+  pagina: number;
+  porPagina: number;
+}
+
+export interface FiltrosNotificacoes {
+  pagina?: number;
+  porPagina?: number;
 }
 
 export const notificacoesService = {
-  async listar(): Promise<Notificacao[]> {
+  async listar(filtros: FiltrosNotificacoes = {}): Promise<ListagemNotificacoes> {
     // O backend resolve o UsuarioCliente logado via cookie de sessão.
-    const { itens } = await api.get<ListagemDTO>('/cliente/notificacoes');
-    return itens.map(fromNotificacaoDTO);
+    const dto = await api.get<ListagemDTO>('/cliente/notificacoes', {
+      pagina: filtros.pagina,
+      porPagina: filtros.porPagina,
+    });
+    return {
+      itens: dto.itens.map(fromNotificacaoDTO),
+      total: dto.total,
+      totalNaoLidas: dto.totalNaoLidas,
+      pagina: dto.pagina,
+      porPagina: dto.porPagina,
+    };
   },
 
   async marcarComoLida(id: string): Promise<void> {

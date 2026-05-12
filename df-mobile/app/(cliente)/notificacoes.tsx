@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   Pressable,
   RefreshControl,
@@ -23,14 +24,27 @@ import {
 } from '@/features/notificacoes/useNotificacoes';
 import { formatDateTime } from '@/lib/format';
 
+const POR_PAGINA = 10;
+
 export default function NotificacoesScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { data, isLoading, refetch, isRefetching } = useNotificacoes();
+  const [pagina, setPagina] = useState(1);
+  const { data, isLoading, refetch, isRefetching } = useNotificacoes({
+    pagina,
+    porPagina: POR_PAGINA,
+  });
   const marcarLida = useMarcarNotificacaoLida();
   const marcarTodas = useMarcarTodasComoLidas();
 
-  const naoLidas = data?.filter((n) => n.naoLida).length ?? 0;
+  const itens = data?.itens ?? [];
+  const total = data?.total ?? 0;
+  const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
+  const naoLidas = data?.totalNaoLidas ?? 0;
+
+  useEffect(() => {
+    if (pagina > totalPaginas) setPagina(totalPaginas);
+  }, [pagina, totalPaginas]);
 
   return (
     <ScrollView
@@ -85,7 +99,7 @@ export default function NotificacoesScreen() {
                 />
               ))}
             </View>
-          ) : !data || data.length === 0 ? (
+          ) : itens.length === 0 ? (
             <View className="items-center gap-2 px-4 py-12">
               <BellOff size={32} color="#475569" />
               <Text className="text-sm font-medium text-slate-200">
@@ -97,7 +111,7 @@ export default function NotificacoesScreen() {
             </View>
           ) : (
             <View>
-              {data.map((n, idx) => (
+              {itens.map((n, idx) => (
                 <Pressable
                   key={n.id}
                   onPress={() => {
@@ -145,6 +159,30 @@ export default function NotificacoesScreen() {
           )}
         </CardBody>
       </Card>
+
+      {total > POR_PAGINA && (
+        <View className="flex-row items-center justify-between">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pagina <= 1}
+            onPress={() => setPagina((p) => Math.max(1, p - 1))}
+          >
+            Anterior
+          </Button>
+          <Text className="text-xs text-slate-400">
+            Página {pagina} de {totalPaginas}
+          </Text>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pagina >= totalPaginas}
+            onPress={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+          >
+            Próxima
+          </Button>
+        </View>
+      )}
     </ScrollView>
   );
 }

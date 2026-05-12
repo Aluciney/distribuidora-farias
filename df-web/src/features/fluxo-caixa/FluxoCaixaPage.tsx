@@ -14,9 +14,11 @@ import { GraficoMovimentacoes } from '@/features/fluxo-caixa/components/GraficoM
 import { SeletorMes } from '@/features/fluxo-caixa/components/SeletorMes';
 import { TabelaUltimasMovimentacoes } from '@/features/fluxo-caixa/components/TabelaUltimasMovimentacoes';
 import { useFluxoCaixa } from '@/features/fluxo-caixa/hooks/useFluxoCaixa';
+import { exportarFluxoCaixaCsv } from '@/features/fluxo-caixa/utils/exportarFluxoCaixa';
 import { formatCurrency } from '@/utils/format';
 import { MetodoPagamento } from '@/types';
 import { cn } from '@/lib/cn';
+import { toast } from '@/store/toast.store';
 
 const METODO_LABEL: Record<string, string> = {
   [MetodoPagamento.BOLETO]: 'Boleto',
@@ -65,7 +67,20 @@ export function FluxoCaixaPage() {
           <SeletorMes valor={mesSelecionado} onChange={setMesSelecionado} />
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm font-medium text-slate-200 hover:bg-slate-800"
+            disabled={!data || isLoading}
+            onClick={() => {
+              if (!data) return;
+              try {
+                exportarFluxoCaixaCsv(data, mesSelecionado);
+                toast.sucesso('Exportação concluída', 'O arquivo CSV foi baixado.');
+              } catch (err) {
+                toast.erro(
+                  'Falha ao exportar',
+                  err instanceof Error ? err.message : 'Tente novamente.',
+                );
+              }
+            }}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm font-medium text-slate-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Download className="h-4 w-4" />
             Exportar

@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, BellOff, Building2, CheckCheck, ChevronRight } from 'lucide-react';
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Pagination } from '@/components/ui/Pagination';
 import {
   useMarcarNotificacaoLida,
   useMarcarTodasComoLidas,
@@ -11,11 +13,19 @@ import { formatDateTime } from '@/utils/format';
 import { cn } from '@/lib/cn';
 
 export function NotificacoesPage() {
-  const { data: notificacoes, isLoading } = useNotificacoes();
+  const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(10);
+
+  useEffect(() => {
+    setPagina(1);
+  }, [porPagina]);
+
+  const { data, isLoading } = useNotificacoes({ pagina, porPagina });
+  const notificacoes = data?.itens;
+  const total = data?.total ?? 0;
+  const naoLidas = data?.totalNaoLidas ?? 0;
   const marcarLida = useMarcarNotificacaoLida();
   const marcarTodas = useMarcarTodasComoLidas();
-
-  const naoLidas = notificacoes?.filter((n) => n.naoLida).length ?? 0;
 
   return (
     <div className="space-y-6">
@@ -138,6 +148,13 @@ export function NotificacoesPage() {
             </ul>
           )}
         </CardBody>
+        <Pagination
+          pagina={pagina}
+          porPagina={porPagina}
+          total={total}
+          onPaginaChange={setPagina}
+          onPorPaginaChange={setPorPagina}
+        />
       </Card>
     </div>
   );
