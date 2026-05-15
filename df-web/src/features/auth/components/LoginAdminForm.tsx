@@ -7,10 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
-import {
-  loginAdminSchema,
-  type LoginAdminFormValues,
-} from '@/features/auth/schemas/auth.schema';
+import { loginAdminSchema, type LoginAdminFormValues } from '@/features/auth/schemas/auth.schema';
 import { useLoginAdmin } from '@/features/auth/hooks/useAuth';
 
 export function LoginAdminForm() {

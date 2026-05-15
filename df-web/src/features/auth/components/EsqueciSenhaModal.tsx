@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { KeyRound, Mail, ShieldCheck } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -36,11 +36,9 @@ export function EsqueciSenhaModal({
   onSucesso,
 }: EsqueciSenhaModalProps) {
   const [etapa, setEtapa] = useState<Etapa>('solicitar');
-  const [tipo, setTipo] = useState<Tipo>(tipoInicial);
+  const tipo: Tipo = tipoInicial;
   const [email, setEmail] = useState(emailInicial);
-  const [destinatarioMascarado, setDestinatarioMascarado] = useState<
-    string | null
-  >(null);
+  const [destinatarioMascarado, setDestinatarioMascarado] = useState<string | null>(null);
   const [codigo, setCodigo] = useState('');
   const [senhaNova, setSenhaNova] = useState('');
   const [confirmar, setConfirmar] = useState('');
@@ -48,11 +46,12 @@ export function EsqueciSenhaModal({
 
   const esqueci = useEsqueciSenha();
   const redefinir = useRedefinirSenha();
+  const [abertoAnterior, setAbertoAnterior] = useState(aberto);
 
-  useEffect(() => {
+  if (aberto !== abertoAnterior) {
+    setAbertoAnterior(aberto);
     if (aberto) {
       setEtapa('solicitar');
-      setTipo(tipoInicial);
       setEmail(emailInicial);
       setDestinatarioMascarado(null);
       setCodigo('');
@@ -60,7 +59,7 @@ export function EsqueciSenhaModal({
       setConfirmar('');
       setErro(null);
     }
-  }, [aberto, tipoInicial, emailInicial]);
+  }
 
   async function solicitar() {
     setErro(null);
@@ -147,28 +146,6 @@ export function EsqueciSenhaModal({
     >
       {etapa === 'solicitar' ? (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-1 rounded-lg border border-slate-800 bg-slate-900 p-1">
-            {(['USUARIO_CLIENTE', 'ADMIN'] as Tipo[]).map((t) => {
-              const ativo = tipo === t;
-              return (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setTipo(t)}
-                  className={`rounded-md px-3 py-2 text-xs font-medium transition-colors ${
-                    ativo
-                      ? t === 'ADMIN'
-                        ? 'bg-emerald-500/10 text-emerald-300'
-                        : 'bg-sky-500/10 text-sky-300'
-                      : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
-                  }`}
-                >
-                  {t === 'ADMIN' ? 'Sou da equipe' : 'Sou cliente'}
-                </button>
-              );
-            })}
-          </div>
-
           <FormField
             label="Email"
             htmlFor="esqueci-email"
