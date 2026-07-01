@@ -1,0 +1,11 @@
+
+services:
+  producao:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: df-web
+    hostname: df-web
+    restart: always
+    ports:
+      - "${PORT_DOCKER}:80"

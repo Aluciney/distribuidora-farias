@@ -25,10 +25,8 @@ import { prismaPlugin } from './plugins/prisma.plugin'
 import { swaggerPlugin } from './plugins/swagger.plugin'
 
 export async function buildApp() {
-	const app = fastify({
-		trustProxy: true,
-		logger: env.NODE_ENV === 'test' ? false : { level: env.LOG_LEVEL },
-	}).withTypeProvider<ZodTypeProvider>()
+	const logger = env.NODE_ENV === 'test' ? false : { level: env.LOG_LEVEL }
+	const app = fastify({ trustProxy: true, logger }).withTypeProvider<ZodTypeProvider>()
 
 	app.setValidatorCompiler(validatorCompiler)
 	app.setSerializerCompiler(serializerCompiler)
