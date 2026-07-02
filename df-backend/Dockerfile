@@ -9,6 +9,7 @@ RUN npm install
 COPY . .
 
 RUN npm run build
+RUN npm run prisma:generate
 
 # ====== STAGE 2: RUNTIME ======
 FROM node:22-slim
@@ -22,4 +23,7 @@ RUN apt-get update && \
 
 COPY --from=builder /build ./ 
 
-ENTRYPOINT ["npm", "start"]
+COPY entrypoint.sh /home/node/app/
+RUN chmod +x /home/node/app/entrypoint.sh
+
+ENTRYPOINT ["/home/node/app/entrypoint.sh"]
