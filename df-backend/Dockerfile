@@ -19,7 +19,8 @@ WORKDIR /home/node/app
 RUN apt-get update && \
     apt-get -y upgrade && \
     apt-get -y dist-upgrade && \
-    apt-get install -y alien libaio1 libssl-dev
+    apt-get install -y alien libaio1 libssl-dev openssl=3.0.* && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /build ./ 
 
