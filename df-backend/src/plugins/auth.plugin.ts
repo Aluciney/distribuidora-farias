@@ -36,7 +36,7 @@ export const authPlugin = fp(async (app) => {
 		parseOptions: {
 			httpOnly: true,
 			secure: true,
-			sameSite: 'none'
+			sameSite: 'lax'
 		}
 	})
 
@@ -54,7 +54,7 @@ export const authPlugin = fp(async (app) => {
 		reply.setCookie(COOKIE_SESSAO, token, {
 			httpOnly: true,
 			secure: env.COOKIE_SECURE,
-			sameSite: 'none',
+			sameSite: 'lax',
 			signed: true,
 			path: '/',
 		})
